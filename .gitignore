@@ -1,0 +1,3 @@
+# Local font files (WezTerm on Windows loads them from wezterm/fonts)
+wezterm/fonts/
+*.bak-*

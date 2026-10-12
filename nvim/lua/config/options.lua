@@ -1,0 +1,16 @@
+-- Options are automatically loaded before lazy.nvim startup
+-- Default options that are always set: https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/options.lua
+
+local opt = vim.opt
+
+opt.relativenumber = false -- absolute line numbers, like VS Code
+opt.mouse = "a"
+opt.clipboard = "unnamedplus"
+opt.wrap = false
+opt.scrolloff = 8
+opt.tabstop = 2
+opt.shiftwidth = 2
+opt.expandtab = true
+
+-- Show AI suggestions as inline grey text (Tab to accept), like Copilot in VS Code
+vim.g.ai_cmp = false
