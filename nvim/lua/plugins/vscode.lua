@@ -1,3 +1,12 @@
+-- Start screen rows: folder line + padding, one row per shortcut + padding, startup line
+local START_FIXED_ROWS = 2 + #require("config.shortcuts").dashboard_keys() + 1 + 1
+-- Big logo: 6 rows of letters + 2 rows of padding
+local LOGO_ROWS = 8
+
+local function start_screen_rows(self)
+  return self._size and self._size.height or vim.o.lines
+end
+
 return {
   -- Monokai Soda (same palette as the terminal) with a transparent background,
   -- so the terminal background (opacity / blur) shows through
@@ -54,20 +63,29 @@ return {
           keys = require("config.shortcuts").dashboard_keys(),
         },
         width = 44,
+        -- Everything fits the panel height, never scrolls. Re-drawn on every resize:
+        -- the git status gets only the rows left over (hidden if none), and on a
+        -- short panel the big logo becomes a one-line name.
         sections = {
-          -- Re-drawn on every resize with the width of the start screen panel
           function(self)
             local width = self._size and self._size.width or vim.o.columns
-            return { header = require("config.logo").header(width), padding = 2 }
+            local compact = start_screen_rows(self) < START_FIXED_ROWS + LOGO_ROWS
+            return { header = require("config.logo").header(width, compact), padding = compact and 1 or 2 }
           end,
           -- Current folder, like the VS Code window title
           function()
             return { text = { { vim.fn.fnamemodify(vim.fn.getcwd(), ":~"), hl = "SnacksDashboardDesc" } }, align = "center", padding = 1 }
           end,
-          { section = "keys", gap = 1, padding = 1 },
+          { section = "keys", gap = 0, padding = 1 },
           -- Git: branch and changed files, only inside a repository
-          function()
+          function(self)
             if not Snacks.git.get_root() then
+              return {}
+            end
+            local rows = start_screen_rows(self)
+            local logo = rows < START_FIXED_ROWS + LOGO_ROWS and 2 or LOGO_ROWS
+            local free = rows - START_FIXED_ROWS - logo - 1
+            if free < 5 then
               return {}
             end
             return {
@@ -75,7 +93,7 @@ return {
               {
                 section = "terminal",
                 cmd = "git status --short --branch --renames",
-                height = 8,
+                height = math.min(8, free - 3),
                 padding = 1,
                 indent = 2,
                 ttl = 0,

@@ -72,9 +72,13 @@ end
 
 -- Big letters when they fit the window; the first name only if the full one is
 -- too wide; plain text as the last resort.
-function M.header(width)
+-- compact: one line of plain text, for short panels
+function M.header(width, compact)
   local name = M.get_name()
   local text = normalize(name ~= nil and name ~= "" and name or "Neovim")
+  if compact then
+    return text
+  end
   local max = (width or vim.o.columns) - 4
   for _, candidate in ipairs({ text, text:match("^(%S+)") }) do
     local rows = draw(candidate)
