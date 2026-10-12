@@ -60,4 +60,4 @@ map("n", "<C-S-m>", function() Snacks.picker.diagnostics() end, { desc = "Proble
 
 -- Terminal (Ctrl+`)
 map({ "n", "t" }, "<C-`>", function() Snacks.terminal() end, { desc = "Toggle terminal" })
-map({ "n", "t" }, "<C-\\>", function() Snacks.terminal() end, { desc = "Toggle terminal" })
+map("n", "<C-\\>", function() Snacks.terminal() end, { desc = "Toggle terminal" })
