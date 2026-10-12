@@ -491,6 +491,7 @@ local nvim_keys = {
   { "3", "CTRL", CSI .. "51;5u" }, -- focus editor 3
   { "0", "CTRL", CSI .. "48;5u" }, -- focus explorer
   { "`", "CTRL|SHIFT", CSI .. "96;6u" }, -- new terminal
+  { "v", "CTRL|SHIFT", CSI .. "118;6u", act.PasteFrom("Clipboard") }, -- markdown preview (pastes elsewhere)
 }
 
 -- macOS: Cmd funciona como en VS Code dentro de nvim (Cmd+P, Cmd+S, Cmd+Shift+P...).
@@ -512,7 +513,7 @@ if wezterm.target_triple:find("darwin") or os.getenv("WEZTERM_FORCE_MAC") then
   for k, seq in pairs(cmd_ctrl) do
     table.insert(nvim_keys, { k, "CMD", seq, cmd_fallback[k] })
   end
-  for _, k in ipairs({ "p", "f", "e", "g", "o", "r", "m", "a", "z", "k", "h", "l" }) do
+  for _, k in ipairs({ "p", "f", "e", "g", "o", "r", "m", "a", "z", "k", "h", "l", "v" }) do
     table.insert(nvim_keys, { k, "CMD|SHIFT", CSI .. string.byte(k) .. ";6u" })
   end
   table.insert(nvim_keys, { "f", "CMD|ALT", "\x08" }) -- replace in file (VS Code for Mac: Cmd+Option+F)

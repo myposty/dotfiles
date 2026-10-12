@@ -160,6 +160,30 @@ map({ "n", "i", "v", "t" }, "<C-0>", function()
   end
 end, { desc = "Focus explorer" })
 
+-- Markdown: switch between editing and the rendered preview (read-only, like VS Code)
+local function markdown_preview()
+  if vim.bo.filetype ~= "markdown" then
+    -- everywhere else Ctrl+Shift+V keeps pasting, as in the terminal
+    vim.api.nvim_paste(vim.fn.getreg("+"), true, -1)
+    return
+  end
+  local on = not vim.b.md_preview
+  vim.b.md_preview = on
+  require("render-markdown").set_buf(on)
+  vim.bo.modifiable = not on
+  if on then
+    vim.cmd.stopinsert()
+  else
+    vim.cmd.startinsert()
+  end
+end
+map({ "n", "i", "v", "t" }, "<C-S-v>", markdown_preview, { desc = "Markdown preview / edit" })
+map({ "n", "i" }, "<C-k>v", function()
+  if vim.bo.filetype == "markdown" then
+    markdown_preview()
+  end
+end, { desc = "Markdown preview / edit" })
+
 map(ANY, "<A-z>", function() vim.wo.wrap = not vim.wo.wrap end, { desc = "Toggle word wrap" })
 map({ "n", "i" }, "<F3>", "<cmd>normal! n<cr>", { desc = "Next match" })
 map({ "n", "i" }, "<S-F3>", "<cmd>normal! N<cr>", { desc = "Previous match" })

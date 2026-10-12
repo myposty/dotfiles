@@ -173,6 +173,10 @@ vim.keymap.set("t", "<LeftMouse>", function()
     drag = divider
     return ""
   end
+  -- a file path (or a numbered diff line) under the click opens in the editor
+  if require("config.links").open_at(pos) then
+    return ""
+  end
   if info and pos.winid ~= vim.api.nvim_get_current_win() then
     -- Windows cannot change inside an expr mapping, so switch right after it
     vim.schedule(function()
@@ -232,7 +236,12 @@ vim.on_key(function(_, typed)
       end)
     end
   elseif typed == left_release then
+    local pos = vim.fn.getmousepos()
     vim.schedule(function()
+      -- a click on a file path in a terminal that was not focused opens the file
+      if vim.fn.mode() == "n" and require("config.links").open_at(pos) then
+        return
+      end
       fix_side_panels()
       local buf = vim.api.nvim_get_current_buf()
       local typable = vim.bo[buf].buftype == "terminal" or is_file_buffer(buf)

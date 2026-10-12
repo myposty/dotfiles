@@ -208,6 +208,15 @@ return {
     },
   },
 
+  -- Markdown preview inside the editor (headings, tables, lists, code), toggled with
+  -- Ctrl+Shift+V / Ctrl+K V like VS Code. Files open as plain text for editing.
+  {
+    "MeanderingProgrammer/render-markdown.nvim",
+    ft = { "markdown" },
+    dependencies = { "nvim-treesitter/nvim-treesitter" },
+    opts = { enabled = false, file_types = { "markdown" } },
+  },
+
   -- php-cs-fixer and phpcs need a local PHP; skip them when PHP is not installed
   {
     "stevearc/conform.nvim",
