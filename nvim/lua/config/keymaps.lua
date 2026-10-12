@@ -19,8 +19,9 @@ map("n", "<C-p>", function() LazyVim.pick("files")() end, { desc = "Find files (
 map({ "n", "i", "v" }, "<C-S-p>", function() Snacks.picker.commands() end, { desc = "Command palette" })
 map("n", "<C-S-f>", function() LazyVim.pick("live_grep")() end, { desc = "Search in files" })
 map("n", "<C-f>", "/", { desc = "Find in file" })
-map("n", "<C-b>", function() Snacks.explorer() end, { desc = "Toggle explorer" })
-map("n", "<C-S-e>", function() Snacks.explorer() end, { desc = "Toggle explorer" })
+map({ "n", "i", "v" }, "<C-b>", function() Snacks.explorer() end, { desc = "Toggle explorer" })
+-- Works inside Claude and terminals too, where Ctrl+B belongs to the app
+map({ "n", "i", "v", "t" }, "<C-S-e>", function() Snacks.explorer() end, { desc = "Toggle explorer" })
 map("n", "<C-S-g>", function() Snacks.lazygit() end, { desc = "Git (lazygit)" })
 map("n", "<C-k><C-o>", function() Snacks.picker.projects() end, { desc = "Open folder" })
 map("n", "<C-S-o>", function() Snacks.picker.projects() end, { desc = "Open folder" })

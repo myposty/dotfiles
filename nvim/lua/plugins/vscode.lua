@@ -87,7 +87,16 @@ return {
       },
       picker = {
         sources = {
-          explorer = { hidden = true, ignored = true, layout = { layout = { position = "left" } } },
+          explorer = {
+            hidden = true,
+            ignored = true,
+            layout = { layout = { position = "left" } },
+            -- Ctrl+B / Ctrl+Shift+E also close it when the tree itself has focus
+            win = {
+              list = { keys = { ["<c-b>"] = "close", ["<c-s-e>"] = "close" } },
+              input = { keys = { ["<c-b>"] = { "close", mode = { "n", "i" } }, ["<c-s-e>"] = { "close", mode = { "n", "i" } } } },
+            },
+          },
           projects = {
             -- Only folders that exist on this machine (Windows, macOS or Linux)
             dev = vim.tbl_filter(function(dir)

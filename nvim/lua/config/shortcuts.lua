@@ -11,7 +11,7 @@ M.list = {
   { keys = "Ctrl+Shift+P", desc = "Command palette", run = function() Snacks.picker.commands() end, home = "p" },
   { keys = "Ctrl+Shift+A", desc = "Claude Code", run = function() require("lazy").load({ plugins = { "claudecode.nvim" } }) vim.cmd("ClaudeCodeFocus") end, home = "c" },
   { keys = "Ctrl+Shift+G", desc = "Git (commit, push)", run = function() Snacks.lazygit() end, home = "g" },
-  { keys = "Ctrl+B", desc = "File explorer (show / hide)", run = function() Snacks.explorer() end },
+  { keys = "Ctrl+B / Ctrl+Shift+E", desc = "File explorer (show / hide); Ctrl+Shift+E also from Claude", run = function() Snacks.explorer() end },
   { keys = "Space h", desc = "Start screen (logo and shortcuts)", run = function() Snacks.dashboard() end },
   { keys = "Ctrl+`", desc = "Terminal (show / hide)", run = function() Snacks.terminal() end },
   { keys = "Space f T", desc = "New terminal", run = function() Snacks.terminal.open() end },
