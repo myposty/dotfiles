@@ -195,6 +195,52 @@ vim.keymap.set({ "n", "t" }, "<LeftRelease>", function()
   return vim.fn.mode() == "t" and "" or "<LeftRelease>"
 end, { expr = true, desc = "Stop dragging" })
 
+-- Like VS Code: with no file open, the middle panel shows the start screen
+-- (open folder, shortcuts, git). It comes back after opening a folder or closing
+-- the last file, and refreshes when the folder changes.
+local function no_files_open()
+  for _, b in ipairs(vim.fn.getbufinfo({ buflisted = 1 })) do
+    if b.name ~= "" then
+      return false
+    end
+  end
+  return true
+end
+
+local function show_start_screen()
+  if not no_files_open() then
+    return
+  end
+  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    local buf = vim.api.nvim_win_get_buf(win)
+    if vim.bo[buf].filetype == "snacks_dashboard" then
+      return
+    end
+  end
+  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    local buf = vim.api.nvim_win_get_buf(win)
+    local empty = vim.api.nvim_buf_get_name(buf) == "" and vim.bo[buf].buftype == ""
+      and vim.bo[buf].filetype == "" and not vim.bo[buf].modified
+      and vim.api.nvim_buf_line_count(buf) == 1 and vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1] == ""
+    if empty and vim.api.nvim_win_get_config(win).relative == "" then
+      Snacks.dashboard({ win = win, buf = buf })
+      return
+    end
+  end
+end
+
+vim.api.nvim_create_autocmd({ "BufEnter", "BufDelete", "DirChanged" }, {
+  group = vim.api.nvim_create_augroup("vscode_start_screen", { clear = true }),
+  callback = function(ev)
+    vim.schedule(function()
+      show_start_screen()
+      if ev.event == "DirChanged" then
+        Snacks.dashboard.update()
+      end
+    end)
+  end,
+})
+
 -- Name on the start screen: ask once per machine, change it with :SetName
 vim.api.nvim_create_user_command("SetName", function(args)
   if args.args ~= "" then

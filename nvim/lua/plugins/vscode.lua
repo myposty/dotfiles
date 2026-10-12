@@ -60,7 +60,28 @@ return {
             local width = self._size and self._size.width or vim.o.columns
             return { header = require("config.logo").header(width), padding = 2 }
           end,
+          -- Current folder, like the VS Code window title
+          function()
+            return { text = { { vim.fn.fnamemodify(vim.fn.getcwd(), ":~"), hl = "SnacksDashboardDesc" } }, align = "center", padding = 1 }
+          end,
           { section = "keys", gap = 1, padding = 1 },
+          -- Git: branch and changed files, only inside a repository
+          function()
+            if not Snacks.git.get_root() then
+              return {}
+            end
+            return {
+              { title = "Git  (Ctrl+Shift+G to commit, push, merge)", padding = 1 },
+              {
+                section = "terminal",
+                cmd = "git status --short --branch --renames",
+                height = 8,
+                padding = 1,
+                indent = 2,
+                ttl = 0,
+              },
+            }
+          end,
           { section = "startup" },
         },
       },
