@@ -140,27 +140,18 @@ local function resize_to(pos)
   fix_side_panels()
 end
 
--- Mouse while typing in a terminal (Claude, shell). Apps like Claude do not use the
+-- Clicks while typing in a terminal (Claude, shell). Apps like Claude do not use the
 -- mouse, so by default any click drops Neovim out of terminal mode and keys stop
 -- reaching the app. Instead a click inside the terminal is ignored (it stays ready
--- to type) and a click on another panel switches to it.
-vim.keymap.set({ "n", "t" }, "<LeftMouse>", function()
+-- to type), a click on another panel switches to it, and a divider can be dragged.
+-- These mappings are terminal-only: in the editor the mouse stays native, so text
+-- selection by dragging works.
+vim.keymap.set("t", "<LeftMouse>", function()
   local pos = vim.fn.getmousepos()
   local divider, info = divider_at(pos)
   if divider then
     drag = divider
     return ""
-  end
-  if vim.fn.mode() ~= "t" then
-    -- Normal mode: a click inside a terminal makes it ready to type again
-    if info and vim.bo[vim.api.nvim_win_get_buf(pos.winid)].buftype == "terminal" then
-      vim.schedule(function()
-        if vim.bo.buftype == "terminal" and vim.fn.mode() ~= "t" then
-          vim.cmd.startinsert()
-        end
-      end)
-    end
-    return "<LeftMouse>"
   end
   if info and pos.winid ~= vim.api.nvim_get_current_win() then
     -- Windows cannot change inside an expr mapping, so switch right after it
@@ -174,26 +165,55 @@ vim.keymap.set({ "n", "t" }, "<LeftMouse>", function()
     end)
   end
   return ""
-end, { expr = true, desc = "Click" })
+end, { expr = true, desc = "Click from a terminal" })
 
-vim.keymap.set({ "n", "t" }, "<LeftDrag>", function()
+vim.keymap.set("t", "<LeftDrag>", function()
   if drag then
     local pos = vim.fn.getmousepos()
     vim.schedule(function()
       resize_to(pos)
     end)
-    return ""
   end
-  return vim.fn.mode() == "t" and "" or "<LeftDrag>"
-end, { expr = true, desc = "Drag a divider" })
+  return ""
+end, { expr = true, desc = "Drag a divider from a terminal" })
 
-vim.keymap.set({ "n", "t" }, "<LeftRelease>", function()
-  if drag then
-    drag = nil
-    return ""
-  end
-  return vim.fn.mode() == "t" and "" or "<LeftRelease>"
+vim.keymap.set("t", "<LeftRelease>", function()
+  drag = nil
+  return ""
 end, { expr = true, desc = "Stop dragging" })
+
+-- Outside terminals Neovim handles the mouse itself; this only observes it:
+-- * pressing on a divider frees the two panels that touch it, so the native drag
+--   resizes them while the other side panels keep their width
+-- * releasing restores the fixed side panels, and a click that ends inside a
+--   terminal makes it ready to type again
+local left_mouse, left_release = vim.keycode("<LeftMouse>"), vim.keycode("<LeftRelease>")
+vim.on_key(function(_, typed)
+  if typed == left_mouse and vim.fn.mode() ~= "t" then
+    local divider = divider_at(vim.fn.getmousepos())
+    if divider then
+      vim.schedule(function()
+        if not vim.api.nvim_win_is_valid(divider.win) then
+          return
+        end
+        local other = neighbor_of(vim.fn.getwininfo(divider.win)[1], divider.kind)
+        for _, w in ipairs({ divider.win, other }) do
+          if w then
+            vim.wo[w].winfixwidth = false
+            vim.wo[w].winfixheight = false
+          end
+        end
+      end)
+    end
+  elseif typed == left_release then
+    vim.schedule(function()
+      fix_side_panels()
+      if vim.bo.buftype == "terminal" and vim.fn.mode() ~= "t" then
+        vim.cmd.startinsert()
+      end
+    end)
+  end
+end, vim.api.nvim_create_namespace("vscode_mouse"))
 
 -- Like VS Code: with no file open, the middle panel shows the start screen
 -- (open folder, shortcuts, git). It comes back after opening a folder or closing

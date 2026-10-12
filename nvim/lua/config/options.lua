@@ -10,7 +10,8 @@ opt.clipboard = "unnamedplus"
 opt.wrap = true
 opt.linebreak = true
 opt.breakindent = true
-opt.scrolloff = 8
+-- No auto-scroll near the edges: a click or mouse selection stays where you put it, like VS Code
+opt.scrolloff = 0
 opt.tabstop = 2
 opt.shiftwidth = 2
 opt.expandtab = true
