@@ -43,32 +43,6 @@ local function divider_at(pos)
   return nil, info
 end
 
--- The mouse pointer shape belongs to the terminal app and Neovim cannot change it,
--- so a divider lights up while the mouse is over it to show it can be dragged
-vim.o.mousemoveevent = true
-local hover_on = false
-local normal_separator
-local function hover_divider(on)
-  if on == hover_on then
-    return
-  end
-  hover_on = on
-  if on then
-    normal_separator = vim.api.nvim_get_hl(0, { name = "WinSeparator", link = false })
-    vim.api.nvim_set_hl(0, "WinSeparator", { fg = "#F92672", bold = true })
-  else
-    vim.api.nvim_set_hl(0, "WinSeparator", normal_separator or {})
-  end
-end
-
-vim.keymap.set({ "n", "i", "v", "t" }, "<MouseMove>", function()
-  local on = divider_at(vim.fn.getmousepos()) ~= nil
-  vim.schedule(function()
-    hover_divider(on)
-  end)
-  return ""
-end, { expr = true, desc = "Highlight the divider under the mouse" })
-
 vim.keymap.set("t", "<LeftMouse>", function()
   local pos = vim.fn.getmousepos()
   local divider, info = divider_at(pos)
