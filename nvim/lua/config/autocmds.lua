@@ -103,7 +103,7 @@ end
 local function is_side_panel(win)
   local buf = vim.api.nvim_win_get_buf(win)
   local ft = vim.bo[buf].filetype
-  return ft == "snacks_picker_list" or ft == "snacks_layout_box" or vim.bo[buf].buftype == "terminal"
+  return ft == "snacks_picker_list" or ft == "snacks_layout_box" or ft == "vscode_scm" or vim.bo[buf].buftype == "terminal"
 end
 
 local function fix_side_panels()

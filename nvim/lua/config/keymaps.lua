@@ -24,7 +24,8 @@ map({ "n", "i" }, "<C-f>", function() vim.cmd.stopinsert() vim.api.nvim_feedkeys
 map(ANY, "<C-b>", function() Snacks.explorer() end, { desc = "Toggle explorer" })
 -- Works inside Claude and terminals too, where Ctrl+B belongs to the app
 map({ "n", "i", "v", "t" }, "<C-S-e>", function() Snacks.explorer() end, { desc = "Toggle explorer" })
-map(ANY, "<C-S-g>", function() Snacks.lazygit() end, { desc = "Git (lazygit)" })
+-- Source control panel under the explorer (like VS Code); lazygit stays on "g" inside it
+map({ "n", "i", "v", "t" }, "<C-S-g>", function() require("config.scm").toggle() end, { desc = "Source control" })
 map("n", "<C-k><C-o>", function() Snacks.picker.projects() end, { desc = "Open folder" })
 map(ANY, "<C-S-o>", function() Snacks.picker.projects() end, { desc = "Open folder" })
 map(ANY, "<C-S-k>", function() require("config.folders").open() end, { desc = "Browse folders" })
