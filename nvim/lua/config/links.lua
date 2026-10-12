@@ -135,7 +135,31 @@ local function tool_paths(line)
   return found
 end
 
+-- Paths in the lines Claude puts above a diff: Update(path) / Read(path · lines 1-20)
+-- and "⎿  Updated path (+1 -2)"
+local function header_paths(line)
+  local found = tool_paths(line)
+  local changed = line:match("%u%a+%s+(%S+)%s+%(%+%d+")
+  if changed then
+    found[#found + 1] = changed
+  end
+  return found
+end
+
+local function rtrim(s) return (s:gsub("%s+$", "")) end
+local function ltrim(s) return (s:gsub("^%s+", "")) end
+
+-- Claude wraps long lines to the terminal width, so a path can be split in two
+-- ("...views\outbou" + "nd\promo.ts"). The text of a line joined with the next one,
+-- and where the join is.
+local function joined(a, b)
+  local left = rtrim(a or "")
+  return left .. ltrim(b or ""), #left
+end
+
 -- Open the file named at a mouse position (vim.fn.getmousepos()). True when it did.
+-- In order: the path under the click (also when wrapped onto two lines), the file of
+-- a Claude header line, the file and line of a diff line, any other path on the line.
 function M.open_at(pos)
   if pos.winid == 0 or pos.line < 1 then
     return false
@@ -145,43 +169,81 @@ function M.open_at(pos)
     return false
   end
   local cwd = vim.fn.getcwd(pos.winid)
-  local line = vim.api.nvim_buf_get_lines(buf, pos.line - 1, pos.line, false)[1] or ""
+  local n = pos.line
+  local lines = vim.api.nvim_buf_get_lines(buf, math.max(n - 301, 0), n + 1, false)
+  local at = math.min(n, 301) -- index of the clicked line in `lines`
+  local line, prev, next = lines[at] or "", lines[at - 1], lines[at + 1]
   local col = vim.str_byteindex(line, "utf-32", math.max(pos.column - 1, 0), false) + 1
 
-  local found = tokens(line)
-  table.sort(found, function(a, b)
-    local da = (col >= a.s and col <= a.e) and 0 or math.min(math.abs(col - a.s), math.abs(col - a.e))
-    local db = (col >= b.s and col <= b.e) and 0 or math.min(math.abs(col - b.s), math.abs(col - b.e))
-    return da < db
-  end)
-  for i, text in ipairs(tool_paths(line)) do
-    table.insert(found, i, { text = text })
-  end
-  for _, t in ipairs(found) do
-    local path = M.resolve(t.text, cwd)
+  local function try(text, lnum)
+    local path = M.resolve(text, cwd)
     if path then
-      vim.schedule(function() open(path, t.lnum) end)
+      vim.schedule(function() open(path, lnum) end)
       return true
     end
   end
 
-  -- a numbered diff line: the file is in the Update(...) / Write(...) line above it
-  local lnum = tonumber(line:match("^%s*(%d+)%s"))
+  -- 1. the path under the click, whole or split across this line and a neighbour
+  local here = tokens(line)
+  for _, t in ipairs(here) do
+    if col >= t.s and col <= t.e and try(t.text, t.lnum) then
+      return true
+    end
+  end
+  for _, pair in ipairs({ { prev, line }, { line, next } }) do
+    if pair[1] and pair[2] then
+      local text, join = joined(pair[1], pair[2])
+      for _, t in ipairs(tokens(text)) do
+        if t.s <= join and t.e > join and try(t.text, t.lnum) then
+          return true
+        end
+      end
+    end
+  end
+
+  -- 2. a header line names the file
+  for _, h in ipairs(header_paths(line)) do
+    if try(h) then
+      return true
+    end
+  end
+
+  -- 3. a diff line opens its file at that line; a wrapped diff line (no number of
+  -- its own) belongs to the numbered line above it
+  local lnum, from = tonumber(line:match("^%s*(%d+)%s")), at
+  if not lnum and line:match("^%s+%S") then
+    for i = at - 1, math.max(at - 8, 1), -1 do
+      lnum = tonumber(lines[i]:match("^%s*(%d+)%s"))
+      if lnum or #header_paths(lines[i]) > 0 then
+        from = i
+        break
+      end
+    end
+  end
   if lnum then
-    local first = math.max(pos.line - 300, 1)
-    local above = vim.api.nvim_buf_get_lines(buf, first - 1, pos.line - 1, false)
-    for i = #above, 1, -1 do
-      local names = tool_paths(above[i])
+    for i = from - 1, 1, -1 do
+      local names = header_paths(lines[i])
+      if #names == 0 and lines[i + 1] then
+        names = header_paths((joined(lines[i], lines[i + 1])))
+      end
       if #names > 0 then
         for _, name in ipairs(names) do
-          local path = M.resolve(name, cwd)
-          if path then
-            vim.schedule(function() open(path, lnum) end)
+          if try(name, lnum) then
             return true
           end
         end
         break
       end
+    end
+  end
+
+  -- 4. any other path on the line, closest to the click first
+  table.sort(here, function(a, b)
+    return math.min(math.abs(col - a.s), math.abs(col - a.e)) < math.min(math.abs(col - b.s), math.abs(col - b.e))
+  end)
+  for _, t in ipairs(here) do
+    if try(t.text, t.lnum) then
+      return true
     end
   end
   return false
