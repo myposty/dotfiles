@@ -182,16 +182,22 @@ local function explorer_win()
   end
 end
 
-function M.open()
+-- opts.focus = false keeps the cursor where it is (used when it opens with the explorer)
+function M.open(opts)
+  opts = opts or {}
+  local focus = opts.focus ~= false
   if valid() then
-    vim.api.nvim_set_current_win(state.win)
+    if focus then
+      vim.api.nvim_set_current_win(state.win)
+    end
     return
   end
   local anchor = explorer_win()
   if not anchor then
     Snacks.explorer.open()
-    return vim.defer_fn(M.open, 150)
+    return vim.defer_fn(function() M.open(opts) end, 150)
   end
+  local previous = vim.api.nvim_get_current_win()
   state.buf = vim.api.nvim_create_buf(false, true)
   vim.bo[state.buf].filetype = FT
   vim.bo[state.buf].bufhidden = "wipe"
@@ -204,11 +210,13 @@ function M.open()
   vim.wo[state.win].winbar = " SOURCE CONTROL"
   map_keys(state.buf)
   M.refresh()
-  -- the explorer re-focuses itself while its layout settles; take the focus back after it
+  -- the explorer re-focuses itself while its layout settles; set the focus after it
   vim.defer_fn(function()
-    if valid() then
+    if focus and valid() then
       vim.api.nvim_set_current_win(state.win)
       vim.cmd.stopinsert()
+    elseif not focus and vim.api.nvim_win_is_valid(previous) then
+      vim.api.nvim_set_current_win(previous)
     end
   end, 150)
 
@@ -240,6 +248,31 @@ function M.close()
     vim.api.nvim_win_close(state.win, true)
   end
 end
+
+-- Like VS Code's sidebar: the panel shows up under the explorer whenever the
+-- explorer opens inside a git repository, and closes together with it
+local auto = vim.api.nvim_create_augroup("vscode_scm_auto", { clear = true })
+vim.api.nvim_create_autocmd("FileType", {
+  group = auto,
+  pattern = "snacks_picker_list",
+  callback = function()
+    vim.defer_fn(function()
+      if not valid() and explorer_win() and root() then
+        M.open({ focus = false })
+      end
+    end, 200)
+  end,
+})
+vim.api.nvim_create_autocmd("WinClosed", {
+  group = auto,
+  callback = function()
+    vim.defer_fn(function()
+      if valid() and not explorer_win() then
+        M.close()
+      end
+    end, 50)
+  end,
+})
 
 function M.toggle()
   if valid() then

@@ -318,3 +318,6 @@ if require("config.logo").get_name() == nil and #vim.api.nvim_list_uis() > 0 the
     require("config.logo").ask(true)
   end)
 end
+
+-- Source control panel that opens with the file explorer (lua/config/scm.lua)
+require("config.scm")

@@ -53,7 +53,8 @@ Press `F1` (or `:Shortcuts`) inside nvim for the full list: type to filter, `Ent
 | `Ctrl+H/J/K/L` | Go to the panel left / down / up / right |
 | `Ctrl+Arrows` | Resize panel (or drag the border) |
 | `Space w H/J/K/L` | Move panel left / down / up / right |
-| `Ctrl+Shift+G` | Source control panel under the explorer: live status, `s` stage, `c` commit, `p` push, `P` pull, `g` lazygit |
+| `Ctrl+Shift+G` | Git (lazygit) |
+| (with the explorer) | Git changes panel under the file tree: live status, `s` stage, `c` commit, `p` push, `P` pull |
 | `Ctrl+Shift+A` | Claude Code panel |
 | `Ctrl+Alt+K` | Send selection or file to Claude |
 | `Tab` | Accept Copilot suggestion |
