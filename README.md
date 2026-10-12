@@ -38,8 +38,8 @@ Press `F1` (or `:Shortcuts`) inside nvim for the full list: type to filter, `Ent
 | `Ctrl+P` | Find file |
 | `Ctrl+Shift+P` | Command palette |
 | `Ctrl+Shift+F` | Search in project |
-| `Ctrl+Shift+O` | Open folder: browse folders (`Enter` goes in, `..` goes up, "Open this folder" opens it) |
-| `Ctrl+Shift+K` | Recent projects |
+| `Ctrl+Shift+O` | Open folder (project list) |
+| `Ctrl+Shift+K` | Browse folders (`Enter` goes in, `..` goes up) |
 | `Ctrl+B` | File explorer |
 | `Ctrl+W` / `Ctrl+Tab` | Close tab / next tab |
 | `Ctrl+S` | Save |
@@ -49,7 +49,10 @@ Press `F1` (or `:Shortcuts`) inside nvim for the full list: type to filter, `Ent
 | `Shift+Alt+F` | Format |
 | `F2` / `F12` / `Shift+F12` | Rename / go to definition / references |
 | `Ctrl+.` | Quick fix |
-| `` Ctrl+` `` | Terminal |
+| `` Ctrl+` `` | Terminal (show / hide) |
+| `Ctrl+H/J/K/L` | Go to the panel left / down / up / right |
+| `Ctrl+Arrows` | Resize panel (or drag the border) |
+| `Space w H/J/K/L` | Move panel left / down / up / right |
 | `Ctrl+Shift+G` | Git (lazygit) |
 | `Ctrl+Shift+A` | Claude Code panel |
 | `Ctrl+Alt+K` | Send selection or file to Claude |
