@@ -27,14 +27,49 @@ vim.api.nvim_create_autocmd({ "BufEnter", "WinEnter" }, {
   end,
 })
 
+-- A terminal scrolled up to read its history: getting ready to type would jump to
+-- the bottom, so clicks and focus leave it where it is (like VS Code)
+local function terminal_scrolled_up(win)
+  win = win or 0
+  local buf = vim.api.nvim_win_get_buf(win)
+  return vim.bo[buf].buftype == "terminal" and vim.fn.line("w$", win) < vim.api.nvim_buf_line_count(buf)
+end
+
 -- Terminals (Claude, shell) are ready to type whenever they get focus, like VS Code
 local term_focus = vim.api.nvim_create_augroup("vscode_terminal_focus", { clear = true })
+-- Leaving a scrolled-up terminal remembers where it was: coming back from a file that
+-- is being typed in enters terminal mode by itself, which jumps to the bottom
+vim.api.nvim_create_autocmd("WinLeave", {
+  group = term_focus,
+  callback = function()
+    vim.w.term_view = terminal_scrolled_up() and vim.fn.winsaveview() or nil
+  end,
+})
 vim.api.nvim_create_autocmd({ "BufEnter", "WinEnter" }, {
   group = term_focus,
   callback = function()
-    if vim.bo.buftype == "terminal" then
+    local view = vim.w.term_view
+    if vim.bo.buftype == "terminal" and view then
+      vim.w.term_view = nil
+      vim.w.term_restoring = true
+      local win = vim.api.nvim_get_current_win()
+      -- terminal mode starts after these autocmds: leave it, then put the view back
+      vim.defer_fn(function()
+        if vim.api.nvim_get_current_win() == win and vim.fn.mode() == "t" then
+          vim.cmd.stopinsert()
+        end
+        vim.defer_fn(function()
+          if vim.api.nvim_win_is_valid(win) then
+            vim.api.nvim_win_call(win, function() vim.fn.winrestview(view) end)
+            vim.w[win].term_restoring = nil
+          end
+        end, 30)
+      end, 30)
+      return
+    end
+    if vim.bo.buftype == "terminal" and not vim.w.term_restoring then
       vim.schedule(function()
-        if vim.bo.buftype == "terminal" and vim.fn.mode() ~= "t" then
+        if vim.bo.buftype == "terminal" and vim.fn.mode() ~= "t" and not terminal_scrolled_up() then
           vim.cmd.startinsert()
         end
       end)
@@ -246,12 +281,27 @@ vim.on_key(function(_, typed)
       local buf = vim.api.nvim_get_current_buf()
       local typable = vim.bo[buf].buftype == "terminal" or is_file_buffer(buf)
       -- a click (not a drag selection) leaves terminals and files ready to type
-      if typable and vim.fn.mode() == "n" then
+      if typable and vim.fn.mode() == "n" and not terminal_scrolled_up() then
         vim.cmd.startinsert()
       end
     end)
   end
 end, vim.api.nvim_create_namespace("vscode_mouse"))
+
+-- Typing in a terminal scrolled up (or not ready to type) goes back to the bottom and
+-- the key reaches the app, like VS Code: letters never run Vim commands there
+vim.api.nvim_create_autocmd("TermOpen", {
+  group = term_focus,
+  callback = function(ev)
+    local keys = { "<Space>", "<CR>", "<BS>" }
+    for b = 33, 126 do
+      keys[#keys + 1] = b == 60 and "<lt>" or string.char(b)
+    end
+    for _, key in ipairs(keys) do
+      vim.keymap.set("n", key, "i" .. key, { buffer = ev.buf, nowait = true })
+    end
+  end,
+})
 
 -- Like VS Code: with no file open, the middle panel shows the start screen
 -- (open folder, shortcuts, git). It comes back after opening a folder or closing
