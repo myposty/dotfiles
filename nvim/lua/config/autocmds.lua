@@ -22,11 +22,39 @@ vim.api.nvim_create_autocmd({ "BufEnter", "WinEnter" }, {
   end,
 })
 
--- A click on another panel moves there directly; clicks inside the terminal reach the app
+-- Mouse while typing in a terminal (Claude, shell). Apps like Claude do not use the
+-- mouse, so by default any click drops Neovim out of terminal mode and keys stop
+-- reaching the app. Instead:
+-- * click inside the terminal: ignored, it stays ready to type
+-- * drag a divider: the panel is resized here, the terminal stays ready to type
+-- * click another panel: leave the terminal and replay the click there
+local drag -- { win, kind } while a divider is being dragged
+
+local function divider_at(pos)
+  local info = pos.winid ~= 0 and vim.fn.getwininfo(pos.winid)[1] or nil
+  if not info then
+    return nil
+  end
+  if pos.wincol == info.width + 1 then
+    return { win = pos.winid, kind = "vertical" }
+  elseif pos.winrow == info.height + 1 then
+    return { win = pos.winid, kind = "horizontal" }
+  end
+  return nil, info
+end
+
 vim.keymap.set("t", "<LeftMouse>", function()
   local pos = vim.fn.getmousepos()
-  if pos.winid ~= 0 and pos.winid ~= vim.api.nvim_get_current_win() then
-    -- Windows cannot change inside an expr mapping, so switch right after it
+  local divider, info = divider_at(pos)
+  if divider then
+    drag = divider
+    return ""
+  end
+  if info and pos.winid == vim.api.nvim_get_current_win() then
+    return ""
+  end
+  -- Windows cannot change inside an expr mapping, so switch right after it
+  if info then
     vim.schedule(function()
       if vim.api.nvim_win_is_valid(pos.winid) then
         vim.api.nvim_set_current_win(pos.winid)
@@ -35,10 +63,44 @@ vim.keymap.set("t", "<LeftMouse>", function()
         end
       end
     end)
-    return ""
+  end
+  return ""
+end, { expr = true, desc = "Click from a terminal" })
+
+-- A click inside a terminal that is not in typing mode puts it back in typing mode
+vim.keymap.set("n", "<LeftMouse>", function()
+  local pos = vim.fn.getmousepos()
+  local info = pos.winid ~= 0 and vim.fn.getwininfo(pos.winid)[1] or nil
+  local on_content = info and pos.wincol <= info.width and pos.winrow <= info.height
+  if on_content and vim.bo[vim.api.nvim_win_get_buf(pos.winid)].buftype == "terminal" then
+    vim.schedule(function()
+      if vim.bo.buftype == "terminal" and vim.fn.mode() ~= "t" then
+        vim.cmd.startinsert()
+      end
+    end)
   end
   return "<LeftMouse>"
-end, { expr = true, desc = "Click another panel from a terminal" })
+end, { expr = true, desc = "Click" })
+
+vim.keymap.set("t", "<LeftDrag>", function()
+  if drag and vim.api.nvim_win_is_valid(drag.win) then
+    local pos = vim.fn.getmousepos()
+    local info = vim.fn.getwininfo(drag.win)[1]
+    vim.schedule(function()
+      if drag.kind == "vertical" then
+        vim.api.nvim_win_set_width(drag.win, math.max(pos.screencol - info.wincol, 1))
+      else
+        vim.api.nvim_win_set_height(drag.win, math.max(pos.screenrow - info.winrow, 1))
+      end
+    end)
+  end
+  return ""
+end, { expr = true, desc = "Resize panels from a terminal" })
+
+vim.keymap.set("t", "<LeftRelease>", function()
+  drag = nil
+  return ""
+end, { expr = true, desc = "Stop resizing" })
 
 -- Name on the start screen: ask once per machine, change it with :SetName
 vim.api.nvim_create_user_command("SetName", function(args)
