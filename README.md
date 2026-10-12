@@ -38,7 +38,8 @@ Press `F1` (or `:Shortcuts`) inside nvim for the full list: type to filter, `Ent
 | `Ctrl+P` | Find file |
 | `Ctrl+Shift+P` | Command palette |
 | `Ctrl+Shift+F` | Search in project |
-| `Ctrl+Shift+O` | Open folder (project list) |
+| `Ctrl+Shift+O` | Open folder: browse folders (`Enter` goes in, `..` goes up, "Open this folder" opens it) |
+| `Ctrl+Shift+K` | Recent projects |
 | `Ctrl+B` | File explorer |
 | `Ctrl+W` / `Ctrl+Tab` | Close tab / next tab |
 | `Ctrl+S` | Save |

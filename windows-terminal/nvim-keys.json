@@ -9,6 +9,7 @@
     { "command": { "action": "sendInput", "input": "\u001b[109;6u" }, "id": "User.nvim.CSM" },
     { "command": { "action": "sendInput", "input": "\u001b[97;6u" }, "id": "User.nvim.CSA" },
     { "command": { "action": "sendInput", "input": "\u001b[122;6u" }, "id": "User.nvim.CSZ" },
+    { "command": { "action": "sendInput", "input": "\u001b[107;6u" }, "id": "User.nvim.CSK" },
     { "command": { "action": "sendInput", "input": "\u001b[46;5u" }, "id": "User.nvim.CDot" },
     { "command": { "action": "sendInput", "input": "\u001b[96;5u" }, "id": "User.nvim.CBacktick" },
     { "command": { "action": "sendInput", "input": "\u001b[107;7u" }, "id": "User.nvim.CAK" }
@@ -23,6 +24,7 @@
     { "id": "User.nvim.CSM", "keys": "ctrl+shift+m" },
     { "id": "User.nvim.CSA", "keys": "ctrl+shift+a" },
     { "id": "User.nvim.CSZ", "keys": "ctrl+shift+z" },
+    { "id": "User.nvim.CSK", "keys": "ctrl+shift+k" },
     { "id": "User.nvim.CDot", "keys": "ctrl+." },
     { "id": "User.nvim.CBacktick", "keys": "ctrl+`" },
     { "id": "User.nvim.CAK", "keys": "ctrl+alt+k" }

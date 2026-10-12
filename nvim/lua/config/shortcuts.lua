@@ -3,7 +3,8 @@
 local M = {}
 
 M.list = {
-  { keys = "Ctrl+Shift+O", desc = "Open folder", run = function() Snacks.picker.projects() end, home = "o" },
+  { keys = "Ctrl+Shift+O", desc = "Open folder", run = function() require("config.folders").open() end, home = "o" },
+  { keys = "Ctrl+Shift+K", desc = "Recent projects", run = function() Snacks.picker.projects() end, home = "k" },
   { keys = "Ctrl+P", desc = "Find file", run = function() LazyVim.pick("files")() end, home = "f" },
   { keys = "Ctrl+Shift+R", desc = "Recent files", run = function() Snacks.picker.recent() end, home = "r" },
   { keys = "Ctrl+Shift+F", desc = "Search in project", run = function() LazyVim.pick("live_grep")() end, home = "s" },

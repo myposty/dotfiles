@@ -475,6 +475,7 @@ local nvim_keys = {
   { "r", "CTRL|SHIFT", CSI .. "114;6u" },
   { "m", "CTRL|SHIFT", CSI .. "109;6u", act.Hide },
   { "a", "CTRL|SHIFT", CSI .. "97;6u" },
+  { "k", "CTRL|SHIFT", CSI .. "107;6u", act.ClearScrollback("ScrollbackOnly") },
   { "z", "CTRL|SHIFT", CSI .. "122;6u", act.TogglePaneZoomState },
   -- Ctrl+tecla (mods 5 = ctrl) y Ctrl+Alt+K (mods 7)
   { ".", "CTRL", CSI .. "46;5u" },
@@ -496,7 +497,7 @@ if wezterm.target_triple:find("darwin") then
   for k, seq in pairs(cmd_ctrl) do
     table.insert(nvim_keys, { k, "CMD", seq, cmd_fallback[k] })
   end
-  for _, k in ipairs({ "p", "f", "e", "g", "o", "r", "m", "a", "z" }) do
+  for _, k in ipairs({ "p", "f", "e", "g", "o", "r", "m", "a", "z", "k" }) do
     table.insert(nvim_keys, { k, "CMD|SHIFT", CSI .. string.byte(k) .. ";6u" })
   end
   table.insert(nvim_keys, { ".", "CMD", CSI .. "46;5u" })

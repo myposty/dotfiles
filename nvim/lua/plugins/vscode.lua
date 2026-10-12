@@ -55,16 +55,14 @@ return {
               "~/code",
             }),
             max_depth = 3,
-            -- Like VS Code "Open Folder": switch to the folder and show its file tree
+            -- Choosing a project opens it like a folder (see lua/config/folders.lua)
             confirm = function(picker, item)
               picker:close()
-              if not item then
-                return
+              if item then
+                vim.schedule(function()
+                  require("config.folders").use(item.file)
+                end)
               end
-              vim.schedule(function()
-                vim.cmd.cd(vim.fn.fnameescape(item.file))
-                Snacks.explorer.open({ cwd = item.file })
-              end)
             end,
           },
         },
