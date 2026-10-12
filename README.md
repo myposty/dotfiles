@@ -41,8 +41,8 @@ Press `F1` (or `:Shortcuts`) inside nvim for the full list: type to filter, `Ent
 | `Ctrl+Shift+O` | Open folder (project list) |
 | `Ctrl+Shift+K` | Browse folders (`Enter` goes in, `..` goes up) |
 | `Ctrl+B` | File explorer |
-| `Ctrl+W` / `Ctrl+Tab` | Close tab / next tab |
-| `Ctrl+S` | Save |
+| `Ctrl+W` or the tab's X / `Ctrl+Tab` | Close file / next tab |
+| `Ctrl+S` | Save (formats with Prettier) |
 | `Ctrl+/` | Toggle comment |
 | `Ctrl+D` | Multi-cursor on next match |
 | `Alt+↑/↓` | Move line |
@@ -59,6 +59,10 @@ Press `F1` (or `:Shortcuts`) inside nvim for the full list: type to filter, `Ent
 | `Tab` | Accept Copilot suggestion |
 
 On macOS inside WezTerm, `Cmd` works like in VS Code (`Cmd+P`, `Cmd+S`, `Cmd+Shift+P`, …).
+
+## Editing like VS Code
+
+Files open ready to type: letters write text. `Esc` switches to Vim's command mode (letters run commands) and `i` goes back to typing. Saving, completion, auto-closing tags and brackets, and format on save (Prettier) work per language: TypeScript, Vue, Astro, Tailwind, PHP, Python, C/C++, Docker, YAML, TOML, Prisma and JSON.
 
 ## Customize
 

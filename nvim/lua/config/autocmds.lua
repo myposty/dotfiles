@@ -7,6 +7,26 @@
 -- Or remove existing autocmds by their group name (which is prefixed with `lazyvim_` for the defaults)
 -- e.g. vim.api.nvim_del_augroup_by_name("lazyvim_wrap_spell")
 
+-- Files open ready to type, like VS Code: letters write text instead of running
+-- Vim commands. Esc still switches to Vim's command mode for those who want it.
+local function is_file_buffer(buf)
+  return vim.bo[buf].buftype == "" and vim.bo[buf].modifiable and not vim.bo[buf].readonly
+    and vim.bo[buf].filetype ~= "snacks_dashboard" and vim.api.nvim_buf_get_name(buf) ~= ""
+end
+
+vim.api.nvim_create_autocmd({ "BufEnter", "WinEnter" }, {
+  group = vim.api.nvim_create_augroup("vscode_type_in_files", { clear = true }),
+  callback = function(ev)
+    vim.schedule(function()
+      local buf = vim.api.nvim_get_current_buf()
+      if buf == ev.buf and is_file_buffer(buf) and vim.fn.mode() == "n"
+        and vim.api.nvim_win_get_config(0).relative == "" then
+        vim.cmd.startinsert()
+      end
+    end)
+  end,
+})
+
 -- Terminals (Claude, shell) are ready to type whenever they get focus, like VS Code
 local term_focus = vim.api.nvim_create_augroup("vscode_terminal_focus", { clear = true })
 vim.api.nvim_create_autocmd({ "BufEnter", "WinEnter" }, {
@@ -161,6 +181,12 @@ vim.keymap.set("t", "<LeftMouse>", function()
         if pos.line > 0 then
           pcall(vim.api.nvim_win_set_cursor, pos.winid, { pos.line, math.max(pos.column - 1, 0) })
         end
+        -- terminal mode ends after this callback, so check once it has
+        vim.defer_fn(function()
+          if is_file_buffer(vim.api.nvim_get_current_buf()) and vim.fn.mode() == "n" then
+            vim.cmd.startinsert()
+          end
+        end, 20)
       end
     end)
   end
@@ -208,7 +234,10 @@ vim.on_key(function(_, typed)
   elseif typed == left_release then
     vim.schedule(function()
       fix_side_panels()
-      if vim.bo.buftype == "terminal" and vim.fn.mode() ~= "t" then
+      local buf = vim.api.nvim_get_current_buf()
+      local typable = vim.bo[buf].buftype == "terminal" or is_file_buffer(buf)
+      -- a click (not a drag selection) leaves terminals and files ready to type
+      if typable and vim.fn.mode() == "n" then
         vim.cmd.startinsert()
       end
     end)

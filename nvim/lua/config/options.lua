@@ -12,6 +12,9 @@ opt.linebreak = true
 opt.breakindent = true
 -- No auto-scroll near the edges: a click or mouse selection stays where you put it, like VS Code
 opt.scrolloff = 0
+-- No swap files: no "ATTENTION, swap file found" prompt after a crash or when the same
+-- file is open twice (like VS Code). Undo history is still kept in undofile.
+opt.swapfile = false
 opt.tabstop = 2
 opt.shiftwidth = 2
 opt.expandtab = true

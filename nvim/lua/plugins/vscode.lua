@@ -142,6 +142,18 @@ return {
     },
   },
 
+  -- Tabs like VS Code: always visible, each with an X to close it (click it or Ctrl+W)
+  {
+    "akinsho/bufferline.nvim",
+    opts = {
+      options = {
+        always_show_bufferline = true,
+        show_buffer_close_icons = true,
+        show_close_icon = false,
+      },
+    },
+  },
+
   -- php-cs-fixer and phpcs need a local PHP; skip them when PHP is not installed
   {
     "stevearc/conform.nvim",
@@ -172,9 +184,9 @@ return {
       terminal = { split_side = "right", split_width_percentage = 0.38 },
     },
     keys = {
-      { "<C-S-a>", "<cmd>ClaudeCodeFocus<cr>", mode = { "n", "t" }, desc = "Claude Code" },
+      { "<C-S-a>", "<cmd>ClaudeCodeFocus<cr>", mode = { "n", "i", "t" }, desc = "Claude Code" },
       { "<C-A-k>", "<cmd>ClaudeCodeSend<cr>", mode = "v", desc = "Send selection to Claude" },
-      { "<C-A-k>", "<cmd>ClaudeCodeAdd %<cr>", mode = "n", desc = "Send file to Claude" },
+      { "<C-A-k>", "<cmd>ClaudeCodeAdd %<cr>", mode = { "n", "i" }, desc = "Send file to Claude" },
     },
   },
 }
