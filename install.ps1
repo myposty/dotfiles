@@ -13,6 +13,39 @@ function Backup($path) {
   }
 }
 
+function Refresh-Path {
+  $env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [Environment]::GetEnvironmentVariable("Path", "User")
+}
+
+Write-Host "== Tools"
+$tools = [ordered]@{
+  "git" = "Git.Git"; "nvim" = "Neovim.Neovim"; "rg" = "BurntSushi.ripgrep.MSVC"; "fd" = "sharkdp.fd";
+  "lazygit" = "JesseDuffield.lazygit"; "node" = "OpenJS.NodeJS.LTS"; "gcc" = "BrechtSanders.WinLibs.POSIX.UCRT";
+  "python" = "Python.Python.3.13"; "wezterm" = "wez.wezterm"
+}
+function Test-Tool($name) {
+  $cmd = Get-Command $name -ErrorAction SilentlyContinue
+  # The Microsoft Store "python" alias exists even when Python is not installed
+  return $cmd -and -not ($name -eq "python" -and $cmd.Source -match "WindowsApps")
+}
+
+Refresh-Path
+foreach ($t in $tools.Keys) {
+  if (-not (Test-Tool $t)) {
+    Write-Host "  installing $t"
+    winget install --id=$($tools[$t]) -e --silent --accept-source-agreements --accept-package-agreements | Out-Null
+    Refresh-Path
+  }
+}
+if (-not (Get-Command tree-sitter -ErrorAction SilentlyContinue)) {
+  Write-Host "  installing tree-sitter CLI"
+  npm install -g --silent tree-sitter-cli | Out-Null
+  Refresh-Path
+}
+$missing = @($tools.Keys) + "tree-sitter" | Where-Object { -not (Test-Tool $_) }
+if ($missing) { throw "missing after install: $($missing -join ', '). Open a new terminal and run this again." }
+Write-Host "  all tools present"
+
 Write-Host "== Neovim"
 $nvim = Join-Path $env:LOCALAPPDATA "nvim"
 $current = Get-Item $nvim -Force -ErrorAction SilentlyContinue
@@ -78,15 +111,8 @@ if (-not $wt) {
   Write-Host "  $($keys.keybindings.Count) nvim key bindings in place (backup: $wt.bak-$stamp)"
 }
 
-Write-Host "== Tools"
-$tools = [ordered]@{
-  "nvim" = "Neovim.Neovim"; "git" = "Git.Git"; "rg" = "BurntSushi.ripgrep.MSVC"; "fd" = "sharkdp.fd";
-  "lazygit" = "JesseDuffield.lazygit"; "node" = "OpenJS.NodeJS.LTS"; "gcc" = "BrechtSanders.WinLibs.POSIX.UCRT";
-  "wezterm" = "wez.wezterm"
-}
-$missing = @()
-foreach ($t in $tools.Keys) { if (-not (Get-Command $t -ErrorAction SilentlyContinue)) { $missing += $tools[$t] } }
-if (-not (Get-Command tree-sitter -ErrorAction SilentlyContinue)) { Write-Host "  missing: tree-sitter -> npm install -g tree-sitter-cli" }
-if ($missing.Count -eq 0) { Write-Host "  all tools present" } else { $missing | ForEach-Object { Write-Host "  missing: winget install --id=$_ -e" } }
+Write-Host "== Plugins, language servers and parsers (first run takes a few minutes)"
+nvim --headless -c "luafile $($repo -replace '\\', '/')/bootstrap.lua"
+if ($LASTEXITCODE -ne 0) { throw "nvim bootstrap failed (see FAILED line above)" }
 
 Write-Host "Done. Open a new terminal and run: nvim"

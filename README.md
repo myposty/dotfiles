@@ -13,7 +13,13 @@ git clone https://github.com/myposty/dotfiles.git ~/dotfiles
 | Windows | `powershell -ExecutionPolicy Bypass -File ~/dotfiles/install.ps1` |
 | macOS / Linux | `bash ~/dotfiles/install.sh` |
 
-The installer links the configs to this repo (existing ones are backed up as `*.bak-<date>`), and lists any missing tool with the command to install it. Running it again is safe.
+The installer:
+
+1. Installs missing tools (winget on Windows, Homebrew on macOS, apt/dnf/pacman on Linux; Neovim and lazygit from their official releases on Linux).
+2. Links the configs to this repo (existing ones are backed up as `*.bak-<date>`).
+3. Pre-installs every plugin, language server and treesitter parser, and fails loudly if any of them did not install.
+
+Running it again is safe. Tested on Windows 11 and a clean Debian 12.
 
 | What | Linked to |
 |---|---|
@@ -21,7 +27,7 @@ The installer links the configs to this repo (existing ones are backed up as `*.
 | `wezterm/` | `~/.config/wezterm` |
 | `windows-terminal/nvim-keys.json` | merged into Windows Terminal settings (Windows only) |
 
-First launch of `nvim` installs the plugins. Then run `:Copilot auth` once to enable AI suggestions.
+Run `:Copilot auth` once inside `nvim` to enable AI suggestions.
 
 ## Shortcuts
 
@@ -54,4 +60,4 @@ Terminals send `Ctrl+Shift+O` as `Ctrl+O`, so Neovim cannot tell them apart. Wez
 
 ## Requirements
 
-`nvim` ≥ 0.11, `git`, `rg`, `fd`, `lazygit`, `node`, a C compiler, `tree-sitter` CLI, and a Nerd Font. On Windows, WezTerm loads fonts from `wezterm/fonts/` (not versioned).
+Installed automatically: `nvim` ≥ 0.11, `git`, `rg`, `fd`, `lazygit`, `node`, `python3`, a C compiler and the `tree-sitter` CLI. macOS needs Homebrew first. On Windows, WezTerm loads fonts from `wezterm/fonts/` (not versioned); copy a Nerd Font there.

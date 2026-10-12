@@ -48,6 +48,26 @@ return {
     },
   },
 
+  -- php-cs-fixer and phpcs need a local PHP; skip them when PHP is not installed
+  {
+    "stevearc/conform.nvim",
+    opts = function(_, opts)
+      if vim.fn.executable("php") == 0 then
+        opts.formatters_by_ft = opts.formatters_by_ft or {}
+        opts.formatters_by_ft.php = {}
+      end
+    end,
+  },
+  {
+    "mfussenegger/nvim-lint",
+    opts = function(_, opts)
+      if vim.fn.executable("php") == 0 then
+        opts.linters_by_ft = opts.linters_by_ft or {}
+        opts.linters_by_ft.php = {}
+      end
+    end,
+  },
+
   -- The extra runs ":Copilot auth" as a build step before the command exists; sign in manually instead
   { "zbirenbaum/copilot.lua", build = function() end },
 

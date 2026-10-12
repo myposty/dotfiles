@@ -12,5 +12,8 @@ opt.tabstop = 2
 opt.shiftwidth = 2
 opt.expandtab = true
 
+-- PHP: intelephense (Node based) works without a local PHP install, same as VS Code
+vim.g.lazyvim_php_lsp = "intelephense"
+
 -- Show AI suggestions as inline grey text (Tab to accept), like Copilot in VS Code
 vim.g.ai_cmp = false
