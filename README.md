@@ -52,7 +52,16 @@ Press `F1` (or `:Shortcuts`) inside nvim for the full list: type to filter, `Ent
 | `F2` / `F12` / `Shift+F12` | Rename / go to definition / references |
 | `Ctrl+.` | Quick fix |
 | `` Ctrl+` `` | Terminal (show / hide) |
-| `Ctrl+H/J/K/L` | Go to the panel left / down / up / right |
+| `Ctrl+1/2/3` / `Ctrl+0` | Go to editor 1/2/3 / file explorer |
+| `Ctrl+\` | Split editor |
+| `Ctrl+J` / ``Ctrl+Shift+` `` | Terminal show-hide / new terminal |
+| `Ctrl+G` | Go to line |
+| `Ctrl+H` / `Ctrl+Shift+H` | Replace in file / in project |
+| `Ctrl+L` / `Ctrl+Shift+L` | Select line / all occurrences |
+| `Ctrl+Enter` / `Ctrl+Shift+Enter` | New line below / above |
+| `Alt+Z` | Toggle word wrap |
+| `F3` / `Shift+F3` | Next / previous match |
+| `Ctrl+,` | Settings |
 | `Ctrl+Arrows` | Resize panel (or drag the border) |
 | `Space w H/J/K/L` | Move panel left / down / up / right |
 | `Ctrl+Shift+G` | Git (lazygit) |
@@ -63,7 +72,7 @@ Press `F1` (or `:Shortcuts`) inside nvim for the full list: type to filter, `Ent
 
 ### macOS (WezTerm)
 
-`Cmd` replaces `Ctrl` like in VS Code for Mac: `Cmd+P`, `Cmd+S`, `Cmd+Shift+P`, `Cmd+Shift+F`, `Cmd+B`, `Cmd+W`, `Cmd+/`, `Cmd+D`, `Cmd+Z` / `Cmd+Shift+Z`, `Cmd+A`, `Cmd+C` / `Cmd+X`, `Cmd+.`, `Cmd+,` (settings), `Cmd+Shift+[` / `]` (tabs), `Cmd+Option+K` (send to Claude). Mac text navigation works too:
+`Cmd` replaces `Ctrl` like in VS Code for Mac: `Cmd+P`, `Cmd+S`, `Cmd+Shift+P`, `Cmd+Shift+F`, `Cmd+B`, `Cmd+W`, `Cmd+/`, `Cmd+D`, `Cmd+Z` / `Cmd+Shift+Z`, `Cmd+A`, `Cmd+C` / `Cmd+X`, `Cmd+.`, `Cmd+,` (settings), `Cmd+Shift+[` / `]` (tabs), `Cmd+Option+K` (send to Claude), `Cmd+G`, `Cmd+Option+F` / `Cmd+Shift+H` (replace), `Cmd+L` / `Cmd+Shift+L`, `Cmd+Enter`, `Cmd+J`, `Cmd+\`, `Cmd+1/2/3`, `Cmd+0`. In short: every shortcut in this list uses `Cmd` instead of `Ctrl` on a Mac. Mac text navigation works too:
 
 | Keys | Action |
 |---|---|

@@ -482,6 +482,15 @@ local nvim_keys = {
   { "`", "CTRL", CSI .. "96;5u" },
   { "k", "CTRL|ALT", CSI .. "107;7u" },
   { ",", "CTRL", CSI .. "44;5u" }, -- Ctrl+, settings (Windows / Linux)
+  { "h", "CTRL|SHIFT", CSI .. "104;6u" }, -- replace in project
+  { "l", "CTRL|SHIFT", CSI .. "108;6u" }, -- select all occurrences
+  { "Enter", "CTRL", CSI .. "13;5u" }, -- new line below
+  { "Enter", "CTRL|SHIFT", CSI .. "13;6u" }, -- new line above
+  { "1", "CTRL", CSI .. "49;5u" }, -- focus editor 1
+  { "2", "CTRL", CSI .. "50;5u" }, -- focus editor 2
+  { "3", "CTRL", CSI .. "51;5u" }, -- focus editor 3
+  { "0", "CTRL", CSI .. "48;5u" }, -- focus explorer
+  { "`", "CTRL|SHIFT", CSI .. "96;6u" }, -- new terminal
 }
 
 -- macOS: Cmd funciona como en VS Code dentro de nvim (Cmd+P, Cmd+S, Cmd+Shift+P...).
@@ -498,12 +507,20 @@ if wezterm.target_triple:find("darwin") or os.getenv("WEZTERM_FORCE_MAC") then
     p = "\x10", s = "\x13", b = "\x02", w = "\x17", f = "\x06",
     a = "\x01", z = "\x1a", d = "\x04", ["/"] = "\x1f",
     c = "\x03", x = "\x18",
+    g = "\x07", l = "\x0c", j = "\x0a", ["\\"] = "\x1c",
   }
   for k, seq in pairs(cmd_ctrl) do
     table.insert(nvim_keys, { k, "CMD", seq, cmd_fallback[k] })
   end
-  for _, k in ipairs({ "p", "f", "e", "g", "o", "r", "m", "a", "z", "k" }) do
+  for _, k in ipairs({ "p", "f", "e", "g", "o", "r", "m", "a", "z", "k", "h", "l" }) do
     table.insert(nvim_keys, { k, "CMD|SHIFT", CSI .. string.byte(k) .. ";6u" })
+  end
+  table.insert(nvim_keys, { "f", "CMD|ALT", "\x08" }) -- replace in file (VS Code for Mac: Cmd+Option+F)
+  table.insert(nvim_keys, { "Enter", "CMD", CSI .. "13;5u" })
+  table.insert(nvim_keys, { "Enter", "CMD|SHIFT", CSI .. "13;6u" })
+  table.insert(nvim_keys, { "`", "CMD|SHIFT", CSI .. "96;6u" })
+  for _, d in ipairs({ "0", "1", "2", "3" }) do
+    table.insert(nvim_keys, { d, "CMD", CSI .. string.byte(d) .. ";5u" })
   end
   table.insert(nvim_keys, { ".", "CMD", CSI .. "46;5u" })
   table.insert(nvim_keys, { ",", "CMD", CSI .. "44;5u" }) -- Settings, like VS Code

@@ -116,6 +116,9 @@ return {
           { section = "startup" },
         },
       },
+      -- Ctrl+J toggles the terminal like VS Code (see keymaps.lua), so the terminal
+      -- must not keep Snacks' own Ctrl+J "go to the window below"
+      terminal = { win = { keys = { nav_j = false } } },
       picker = {
         sources = {
           explorer = {
