@@ -1,10 +1,38 @@
--- Start screen rows: folder line + padding, one row per shortcut + padding, startup line
-local START_FIXED_ROWS = 2 + #require("config.shortcuts").dashboard_keys() + 1 + 1
--- Big logo: 6 rows of letters + 2 rows of padding
-local LOGO_ROWS = 8
+-- Start screen layout: the panel height is a row budget shared out by priority, so
+-- the content always fits and there is nothing to scroll. Re-computed on every redraw
+-- (Snacks redraws on resize), from the most to the least important part.
+local ROWS = { folder = 2, name = 2, logo = 8, startup = 1, git_min = 4 }
+-- When even the shortcuts do not fit, these go first (F1 still lists everything)
+local DROP_FIRST = { "n", "l", "k", "r", ",", "s", "p", "e", "g", "c", "f", "o" }
 
-local function start_screen_rows(self)
-  return self._size and self._size.height or vim.o.lines
+local function start_screen_layout(self)
+  local rows = self._size and self._size.height or vim.o.lines
+  local keys = require("config.shortcuts").dashboard_keys()
+  local layout = { keys = keys }
+  local free = rows - (#keys + 1) - 1 -- shortcuts + bottom padding, and Snacks' last line
+  for _, drop in ipairs(DROP_FIRST) do
+    if free >= 0 then
+      break
+    end
+    for i, k in ipairs(keys) do
+      if k.key == drop then
+        table.remove(keys, i)
+        free = free + 1
+        break
+      end
+    end
+  end
+  for _, part in ipairs({ "folder", "name", "logo", "startup" }) do
+    if free >= ROWS[part] then
+      layout[part] = true
+      free = free - ROWS[part]
+    end
+  end
+  if layout.logo then
+    free = free + ROWS.name -- the big logo replaces the one-line name
+  end
+  layout.git_rows = free
+  return layout
 end
 
 return {
@@ -63,20 +91,30 @@ return {
           keys = require("config.shortcuts").dashboard_keys(),
         },
         width = 48,
-        -- Everything fits the panel height, never scrolls. Re-drawn on every resize:
-        -- the git status gets only the rows left over (hidden if none), and on a
-        -- short panel the big logo becomes a one-line name.
+        -- Responsive: everything fits the panel height (see start_screen_layout).
+        -- Tall panel: big logo + folder + shortcuts + git + startup time. As it gets
+        -- shorter, the git files, startup time, logo, name and folder go away in that
+        -- order, and on a tiny panel the least used shortcuts too.
         sections = {
           function(self)
+            self._layout = start_screen_layout(self)
+            if not self._layout.name then
+              return {}
+            end
             local width = self._size and self._size.width or vim.o.columns
-            local compact = start_screen_rows(self) < START_FIXED_ROWS + LOGO_ROWS
+            local compact = not self._layout.logo
             return { header = require("config.logo").header(width, compact), padding = compact and 1 or 2 }
           end,
           -- Current folder, like the VS Code window title
-          function()
+          function(self)
+            if not self._layout.folder then
+              return {}
+            end
             return { text = { { vim.fn.fnamemodify(vim.fn.getcwd(), ":~"), hl = "SnacksDashboardDesc" } }, align = "center", padding = 1 }
           end,
-          { section = "keys", gap = 0, padding = 1 },
+          function(self)
+            return vim.list_extend({ gap = 0, padding = 1 }, self._layout.keys)
+          end,
           -- Git: branch and changed files, read fresh on every redraw (plain text,
           -- no embedded terminal). Only inside a repository.
           function(self)
@@ -84,11 +122,9 @@ return {
             if vim.v.shell_error ~= 0 or #lines == 0 then
               return {}
             end
-            local rows = start_screen_rows(self)
-            local logo = rows < START_FIXED_ROWS + LOGO_ROWS and 2 or LOGO_ROWS
-            local free = rows - START_FIXED_ROWS - logo - 2 -- keep one spare row
+            local free = self._layout.git_rows
             -- title + gap + summary + bottom gap = 4 rows, then one row per file
-            if free < 4 then
+            if free < ROWS.git_min then
               return {}
             end
             local head = lines[1]:gsub("^## ", "")
@@ -113,7 +149,9 @@ return {
             items[#items].padding = 1
             return items
           end,
-          { section = "startup" },
+          function(self)
+            return self._layout.startup and { section = "startup" } or {}
+          end,
         },
       },
       -- Ctrl+J toggles the terminal like VS Code (see keymaps.lua), so the terminal

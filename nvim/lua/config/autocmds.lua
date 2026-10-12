@@ -304,8 +304,8 @@ vim.api.nvim_create_autocmd({ "TermClose", "FocusGained", "BufEnter" }, {
   end,
 })
 
--- The start screen always fits the window, so it never scrolls: no mouse wheel or
--- Ctrl+E/Y, and anything else that moves the view (cursor jumps) snaps it back to the top
+-- The start screen always fits the window (see plugins/vscode.lua), but Vim still lets
+-- the wheel and Ctrl+E/Y push the last line up to the top; there is nothing to scroll to
 local function lock_start_screen(buf)
   for _, key in ipairs({ "<ScrollWheelUp>", "<ScrollWheelDown>", "<C-e>", "<C-y>" }) do
     vim.keymap.set({ "n", "v" }, key, "<Nop>", { buffer = buf })
@@ -321,25 +321,6 @@ vim.api.nvim_create_autocmd("FileType", {
   group = vim.api.nvim_create_augroup("vscode_start_screen_noscroll", { clear = true }),
   pattern = "snacks_dashboard",
   callback = function(ev) lock_start_screen(ev.buf) end,
-})
-vim.api.nvim_create_autocmd("WinScrolled", {
-  group = "vscode_start_screen_noscroll",
-  callback = function()
-    -- Neovim ignores a view change made inside WinScrolled, so apply it right after
-    vim.schedule(function()
-      for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
-        local buf = vim.api.nvim_win_get_buf(win)
-        if vim.bo[buf].filetype == "snacks_dashboard"
-          and vim.api.nvim_buf_line_count(buf) <= vim.api.nvim_win_get_height(win) then
-          vim.api.nvim_win_call(win, function()
-            if vim.fn.line("w0") ~= 1 then
-              vim.fn.winrestview({ topline = 1 })
-            end
-          end)
-        end
-      end
-    end)
-  end,
 })
 
 -- Name on the start screen: ask once per machine, change it with :SetName
