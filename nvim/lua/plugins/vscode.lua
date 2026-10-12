@@ -77,28 +77,41 @@ return {
             return { text = { { vim.fn.fnamemodify(vim.fn.getcwd(), ":~"), hl = "SnacksDashboardDesc" } }, align = "center", padding = 1 }
           end,
           { section = "keys", gap = 0, padding = 1 },
-          -- Git: branch and changed files, only inside a repository
+          -- Git: branch and changed files, read fresh on every redraw (plain text,
+          -- no embedded terminal). Only inside a repository.
           function(self)
-            if not Snacks.git.get_root() then
+            local lines = vim.fn.systemlist({ "git", "-C", vim.fn.getcwd(), "status", "--short", "--branch" })
+            if vim.v.shell_error ~= 0 or #lines == 0 then
               return {}
             end
             local rows = start_screen_rows(self)
             local logo = rows < START_FIXED_ROWS + LOGO_ROWS and 2 or LOGO_ROWS
-            local free = rows - START_FIXED_ROWS - logo - 1
-            if free < 5 then
+            local free = rows - START_FIXED_ROWS - logo - 2 -- keep one spare row
+            -- title + gap + summary + bottom gap = 4 rows, then one row per file
+            if free < 4 then
               return {}
             end
-            return {
-              { title = "Git  (Ctrl+Shift+G to commit, push, merge)", padding = 1 },
-              {
-                section = "terminal",
-                cmd = "git status --short --branch --renames",
-                height = math.min(8, free - 3),
-                padding = 1,
-                indent = 2,
-                ttl = 0,
-              },
+            local head = lines[1]:gsub("^## ", "")
+            local branch = head:match("^No commits yet on (%S+)") or head:match("^([^%s%.]+)") or head
+            local ahead, behind = head:match("ahead (%d+)"), head:match("behind (%d+)")
+            local changed = #lines - 1
+            local summary = branch .. "  ·  " .. (changed == 0 and "clean" or (changed .. " changed"))
+              .. (ahead and ("  ·  " .. ahead .. " to push") or "")
+              .. (behind and ("  ·  " .. behind .. " to pull") or "")
+            local items = {
+              { title = "Git  (Ctrl+Shift+G: commit, push, merge)", padding = 1 },
+              { text = { { summary, hl = "SnacksDashboardKey" } }, align = "center" },
             }
+            local room = free - 4
+            for i = 2, math.min(#lines, room + 1) do
+              local file = lines[i]
+              if i == room + 1 and #lines > room + 1 then
+                file = ("  … %d more"):format(#lines - room)
+              end
+              items[#items + 1] = { text = { { file:sub(1, 44), hl = "SnacksDashboardDesc" } } }
+            end
+            items[#items].padding = 1
+            return items
           end,
           { section = "startup" },
         },

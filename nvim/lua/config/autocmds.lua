@@ -290,6 +290,20 @@ vim.api.nvim_create_autocmd({ "BufEnter", "BufDelete", "DirChanged" }, {
   end,
 })
 
+-- Keep the git status on the start screen current: after lazygit or any terminal
+-- closes, when coming back to the window, and when the start screen gets focus
+vim.api.nvim_create_autocmd({ "TermClose", "FocusGained", "BufEnter" }, {
+  group = vim.api.nvim_create_augroup("vscode_start_screen_git", { clear = true }),
+  callback = function(ev)
+    if ev.event == "BufEnter" and vim.bo[ev.buf].filetype ~= "snacks_dashboard" then
+      return
+    end
+    vim.defer_fn(function()
+      pcall(Snacks.dashboard.update)
+    end, 100)
+  end,
+})
+
 -- Name on the start screen: ask once per machine, change it with :SetName
 vim.api.nvim_create_user_command("SetName", function(args)
   if args.args ~= "" then
