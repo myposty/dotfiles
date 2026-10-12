@@ -481,18 +481,23 @@ local nvim_keys = {
   { ".", "CTRL", CSI .. "46;5u" },
   { "`", "CTRL", CSI .. "96;5u" },
   { "k", "CTRL|ALT", CSI .. "107;7u" },
+  { ",", "CTRL", CSI .. "44;5u" }, -- Ctrl+, settings (Windows / Linux)
 }
 
 -- macOS: Cmd funciona como en VS Code dentro de nvim (Cmd+P, Cmd+S, Cmd+Shift+P...).
 -- Fuera de nvim, Cmd conserva su comportamiento normal de WezTerm.
-if wezterm.target_triple:find("darwin") then
+-- WEZTERM_FORCE_MAC=1 lets the Mac bindings be checked on another OS (wezterm show-keys)
+if wezterm.target_triple:find("darwin") or os.getenv("WEZTERM_FORCE_MAC") then
   local cmd_fallback = {
     w = act.CloseCurrentTab({ confirm = true }),
     f = act.Search("CurrentSelectionOrEmptyString"),
+    c = act.CopyTo("Clipboard"),
   }
+  -- Cmd+letter behaves like Ctrl+letter in nvim (the VS Code shortcuts)
   local cmd_ctrl = {
     p = "\x10", s = "\x13", b = "\x02", w = "\x17", f = "\x06",
     a = "\x01", z = "\x1a", d = "\x04", ["/"] = "\x1f",
+    c = "\x03", x = "\x18",
   }
   for k, seq in pairs(cmd_ctrl) do
     table.insert(nvim_keys, { k, "CMD", seq, cmd_fallback[k] })
@@ -501,6 +506,21 @@ if wezterm.target_triple:find("darwin") then
     table.insert(nvim_keys, { k, "CMD|SHIFT", CSI .. string.byte(k) .. ";6u" })
   end
   table.insert(nvim_keys, { ".", "CMD", CSI .. "46;5u" })
+  table.insert(nvim_keys, { ",", "CMD", CSI .. "44;5u" }) -- Settings, like VS Code
+  table.insert(nvim_keys, { "k", "CMD|ALT", CSI .. "107;7u" }) -- send to Claude
+  table.insert(nvim_keys, { "]", "CMD|SHIFT", CSI .. "9;5u" }) -- next tab
+  table.insert(nvim_keys, { "[", "CMD|SHIFT", CSI .. "9;6u" }) -- previous tab
+  -- macOS text navigation: these work in the shell too, so they are sent everywhere
+  local everywhere = {
+    { "LeftArrow", "CMD", "\x1b[H" }, -- start of line
+    { "RightArrow", "CMD", "\x1b[F" }, -- end of line
+    { "UpArrow", "CMD", "\x1b[1;5H" }, -- start of file
+    { "DownArrow", "CMD", "\x1b[1;5F" }, -- end of file
+    { "Backspace", "CMD", "\x15" }, -- delete to start of line
+  }
+  for _, k in ipairs(everywhere) do
+    table.insert(nvim_keys, { k[1], k[2], k[3], act.SendString(k[3]) })
+  end
 end
 
 for _, spec in ipairs(nvim_keys) do

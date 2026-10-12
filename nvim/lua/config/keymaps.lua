@@ -30,6 +30,17 @@ map(ANY, "<C-S-o>", function() Snacks.picker.projects() end, { desc = "Open fold
 map(ANY, "<C-S-k>", function() require("config.folders").open() end, { desc = "Browse folders" })
 map(ANY, "<C-S-r>", function() Snacks.picker.recent() end, { desc = "Open recent file" })
 
+-- Settings (Ctrl+, / Cmd+, like VS Code)
+map(ANY, "<C-,>", function() require("config.shortcuts").settings() end, { desc = "Settings" })
+
+-- Word navigation (Alt / Option + arrows, Alt / Option + Backspace)
+map({ "n", "v" }, "<A-Left>", "b", { desc = "Previous word" })
+map({ "n", "v" }, "<A-Right>", "w", { desc = "Next word" })
+map("i", "<A-Left>", "<C-o>b", { desc = "Previous word" })
+map("i", "<A-Right>", "<C-o>w", { desc = "Next word" })
+-- noremap: this <C-w> is Vim's built-in "delete word", not the Close tab mapping
+map("i", "<A-BS>", "<C-w>", { desc = "Delete previous word" })
+
 -- Buffers (tabs)
 map(ANY, "<C-w>", function() Snacks.bufdelete() end, { desc = "Close tab" })
 map(ANY, "<C-Tab>", "<cmd>bnext<cr>", { desc = "Next tab" })

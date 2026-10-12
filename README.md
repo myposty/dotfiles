@@ -61,7 +61,19 @@ Press `F1` (or `:Shortcuts`) inside nvim for the full list: type to filter, `Ent
 | `Ctrl+Alt+K` | Send selection or file to Claude |
 | `Tab` | Accept Copilot suggestion |
 
-On macOS inside WezTerm, `Cmd` works like in VS Code (`Cmd+P`, `Cmd+S`, `Cmd+Shift+P`, …).
+### macOS (WezTerm)
+
+`Cmd` replaces `Ctrl` like in VS Code for Mac: `Cmd+P`, `Cmd+S`, `Cmd+Shift+P`, `Cmd+Shift+F`, `Cmd+B`, `Cmd+W`, `Cmd+/`, `Cmd+D`, `Cmd+Z` / `Cmd+Shift+Z`, `Cmd+A`, `Cmd+C` / `Cmd+X`, `Cmd+.`, `Cmd+,` (settings), `Cmd+Shift+[` / `]` (tabs), `Cmd+Option+K` (send to Claude). Mac text navigation works too:
+
+| Keys | Action |
+|---|---|
+| `Cmd+←` / `Cmd+→` | Start / end of line |
+| `Cmd+↑` / `Cmd+↓` | Start / end of file |
+| `Cmd+Backspace` | Delete to the start of the line |
+| `Option+←` / `Option+→` | Previous / next word |
+| `Option+Backspace` | Delete the previous word |
+
+The terminal stays on ``Ctrl+` `` (same as VS Code for Mac; macOS uses ``Cmd+` `` to switch windows).
 
 ## Editing like VS Code
 
