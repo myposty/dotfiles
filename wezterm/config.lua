@@ -22,7 +22,7 @@ return {
   --   "nord"             azul frio nordico
   --   "rose-pine"        malva elegante
   --   "everforest"       verde bosque
-  theme = "indigo",
+  theme = "monokai-soda",
 
   -- ==== FONDO (blur / transparencia) ========================================
   -- opacity: 1.0 = solido | 0.7 = translucido | 0.5 = bien transparente.

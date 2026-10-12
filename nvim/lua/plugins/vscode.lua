@@ -1,11 +1,32 @@
 return {
-  -- Same theme as VS Code
+  -- Monokai Soda (same palette as the terminal) with a transparent background,
+  -- so the terminal background (opacity / blur) shows through
   {
-    "loctvl842/monokai-pro.nvim",
+    "tanvirtin/monokai.nvim",
     priority = 1000,
-    opts = { filter = "pro" },
+    config = function()
+      local monokai = require("monokai")
+      monokai.setup({ palette = monokai.soda, italics = false })
+    end,
   },
-  { "LazyVim/LazyVim", opts = { colorscheme = "monokai-pro" } },
+  {
+    "LazyVim/LazyVim",
+    opts = {
+      colorscheme = function()
+        vim.cmd.colorscheme("monokai_soda")
+        local clear = {
+          "Normal", "NormalNC", "NormalFloat", "SignColumn", "LineNr", "CursorLineNr", "EndOfBuffer",
+          "FoldColumn", "StatusLine", "StatusLineNC", "TabLine", "TabLineFill", "WinBar", "WinBarNC",
+          "SnacksDashboardNormal", "SnacksPickerList", "SnacksPickerInput", "SnacksPickerPreview",
+        }
+        for _, group in ipairs(clear) do
+          local hl = vim.api.nvim_get_hl(0, { name = group, link = false })
+          hl.bg = nil
+          vim.api.nvim_set_hl(0, group, hl)
+        end
+      end,
+    },
+  },
 
   -- Ctrl+D multi-cursor, like VS Code
   {
