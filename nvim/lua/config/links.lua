@@ -55,8 +55,12 @@ end
 
 function M.resolve(text, cwd)
   cwd = clean(cwd)
-  text = clean(vim.fn.expand(text))
+  -- ~\ or ~/ is the home folder (expand() would also eat \ and treat % and # as names)
+  text = clean(text):gsub("^~/", function() return clean(vim.uv.os_homedir()) .. "/" end)
   local base = text:match("[^/…]+$")
+  if not base or vim.fn.isdirectory(text) == 1 then
+    return nil
+  end
   if not base then
     return nil
   end
@@ -116,6 +120,21 @@ local function open(path, lnum)
   end, 80)
 end
 
+-- Paths inside Claude's tool lines, Update(...) / Read(...) / Write(...): any file,
+-- with or without extension, spaces included. "Read(a.lua · lines 1-20)" gives a.lua.
+local function tool_paths(line)
+  local found = {}
+  for inner in line:gmatch("%u%a+%(([^()]+)%)") do
+    inner = vim.trim(inner)
+    found[#found + 1] = inner
+    local first = inner:match("^(.-)%s+·") or inner:match("^(%S+)%s")
+    if first then
+      found[#found + 1] = first
+    end
+  end
+  return found
+end
+
 -- Open the file named at a mouse position (vim.fn.getmousepos()). True when it did.
 function M.open_at(pos)
   if pos.winid == 0 or pos.line < 1 then
@@ -135,6 +154,9 @@ function M.open_at(pos)
     local db = (col >= b.s and col <= b.e) and 0 or math.min(math.abs(col - b.s), math.abs(col - b.e))
     return da < db
   end)
+  for i, text in ipairs(tool_paths(line)) do
+    table.insert(found, i, { text = text })
+  end
   for _, t in ipairs(found) do
     local path = M.resolve(t.text, cwd)
     if path then
@@ -149,12 +171,14 @@ function M.open_at(pos)
     local first = math.max(pos.line - 300, 1)
     local above = vim.api.nvim_buf_get_lines(buf, first - 1, pos.line - 1, false)
     for i = #above, 1, -1 do
-      local name = above[i]:match("%u%l+%((" .. PATH .. ")%)")
-      if name then
-        local path = M.resolve(name, cwd)
-        if path then
-          vim.schedule(function() open(path, lnum) end)
-          return true
+      local names = tool_paths(above[i])
+      if #names > 0 then
+        for _, name in ipairs(names) do
+          local path = M.resolve(name, cwd)
+          if path then
+            vim.schedule(function() open(path, lnum) end)
+            return true
+          end
         end
         break
       end

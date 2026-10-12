@@ -208,6 +208,26 @@ return {
     },
   },
 
+  -- Every folder icon in the same blue as macOS folders (named folders like .git or
+  -- .github keep their own glyph, only the color changes)
+  {
+    "nvim-mini/mini.icons",
+    config = function(_, opts)
+      vim.api.nvim_set_hl(0, "FolderIcon", { fg = "#4AA8F5", default = true })
+      vim.api.nvim_create_autocmd("ColorScheme", {
+        callback = function() vim.api.nvim_set_hl(0, "FolderIcon", { fg = "#4AA8F5", default = true }) end,
+      })
+      local icons = require("mini.icons")
+      icons.setup(opts)
+      opts.default = vim.tbl_deep_extend("force", opts.default or {}, { directory = { hl = "FolderIcon" } })
+      opts.directory = opts.directory or {}
+      for _, name in ipairs(icons.list("directory")) do
+        opts.directory[name] = vim.tbl_extend("force", opts.directory[name] or {}, { hl = "FolderIcon" })
+      end
+      icons.setup(opts)
+    end,
+  },
+
   -- Markdown preview inside the editor (headings, tables, lists, code), toggled with
   -- Ctrl+Shift+V / Ctrl+K V like VS Code. Files open as plain text for editing.
   {
