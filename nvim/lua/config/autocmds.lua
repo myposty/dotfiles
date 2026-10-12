@@ -77,18 +77,93 @@ if vim.fn.has("win32") == 0 then
   })
 end
 
-vim.keymap.set("t", "<LeftMouse>", function()
+-- Side panels (file tree, Claude, side terminals) keep their size; only the middle
+-- panel grows or shrinks when the window is resized. A full-width panel (bottom
+-- terminal) keeps its height instead.
+local function is_side_panel(win)
+  local buf = vim.api.nvim_win_get_buf(win)
+  local ft = vim.bo[buf].filetype
+  return ft == "snacks_picker_list" or ft == "snacks_layout_box" or vim.bo[buf].buftype == "terminal"
+end
+
+local function fix_side_panels()
+  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    if vim.api.nvim_win_get_config(win).relative == "" and is_side_panel(win) then
+      local full_width = vim.api.nvim_win_get_width(win) >= vim.o.columns - 1
+      vim.wo[win].winfixwidth = not full_width
+      vim.wo[win].winfixheight = full_width
+    end
+  end
+end
+
+vim.api.nvim_create_autocmd({ "BufWinEnter", "FileType", "TermOpen", "WinNew" }, {
+  group = vim.api.nvim_create_augroup("vscode_fixed_side_panels", { clear = true }),
+  callback = function()
+    vim.schedule(fix_side_panels)
+  end,
+})
+
+-- Dragging a divider resizes only the two panels that touch it, so the file tree
+-- never shrinks when the editor/Claude divider moves. Works from any panel,
+-- including terminals, which stay ready to type.
+local function neighbor_of(info, kind)
+  for _, w in ipairs(vim.fn.getwininfo()) do
+    if w.tabnr == info.tabnr and vim.api.nvim_win_get_config(w.winid).relative == "" then
+      if kind == "vertical" and w.wincol == info.wincol + info.width + 1
+        and w.winrow < info.winrow + info.height and w.winrow + w.height > info.winrow then
+        return w.winid
+      elseif kind == "horizontal" and w.winrow == info.winrow + info.height + 1
+        and w.wincol < info.wincol + info.width and w.wincol + w.width > info.wincol then
+        return w.winid
+      end
+    end
+  end
+end
+
+local function resize_to(pos)
+  if not (drag and vim.api.nvim_win_is_valid(drag.win)) then
+    return
+  end
+  local info = vim.fn.getwininfo(drag.win)[1]
+  local other = neighbor_of(info, drag.kind)
+  for _, w in ipairs({ drag.win, other }) do
+    if w then
+      vim.wo[w].winfixwidth = false
+      vim.wo[w].winfixheight = false
+    end
+  end
+  if drag.kind == "vertical" then
+    vim.api.nvim_win_set_width(drag.win, math.max(pos.screencol - info.wincol, 1))
+  else
+    vim.api.nvim_win_set_height(drag.win, math.max(pos.screenrow - info.winrow, 1))
+  end
+  fix_side_panels()
+end
+
+-- Mouse while typing in a terminal (Claude, shell). Apps like Claude do not use the
+-- mouse, so by default any click drops Neovim out of terminal mode and keys stop
+-- reaching the app. Instead a click inside the terminal is ignored (it stays ready
+-- to type) and a click on another panel switches to it.
+vim.keymap.set({ "n", "t" }, "<LeftMouse>", function()
   local pos = vim.fn.getmousepos()
   local divider, info = divider_at(pos)
   if divider then
     drag = divider
     return ""
   end
-  if info and pos.winid == vim.api.nvim_get_current_win() then
-    return ""
+  if vim.fn.mode() ~= "t" then
+    -- Normal mode: a click inside a terminal makes it ready to type again
+    if info and vim.bo[vim.api.nvim_win_get_buf(pos.winid)].buftype == "terminal" then
+      vim.schedule(function()
+        if vim.bo.buftype == "terminal" and vim.fn.mode() ~= "t" then
+          vim.cmd.startinsert()
+        end
+      end)
+    end
+    return "<LeftMouse>"
   end
-  -- Windows cannot change inside an expr mapping, so switch right after it
-  if info then
+  if info and pos.winid ~= vim.api.nvim_get_current_win() then
+    -- Windows cannot change inside an expr mapping, so switch right after it
     vim.schedule(function()
       if vim.api.nvim_win_is_valid(pos.winid) then
         vim.api.nvim_set_current_win(pos.winid)
@@ -99,42 +174,26 @@ vim.keymap.set("t", "<LeftMouse>", function()
     end)
   end
   return ""
-end, { expr = true, desc = "Click from a terminal" })
-
--- A click inside a terminal that is not in typing mode puts it back in typing mode
-vim.keymap.set("n", "<LeftMouse>", function()
-  local pos = vim.fn.getmousepos()
-  local info = pos.winid ~= 0 and vim.fn.getwininfo(pos.winid)[1] or nil
-  local on_content = info and pos.wincol <= info.width and pos.winrow <= info.height
-  if on_content and vim.bo[vim.api.nvim_win_get_buf(pos.winid)].buftype == "terminal" then
-    vim.schedule(function()
-      if vim.bo.buftype == "terminal" and vim.fn.mode() ~= "t" then
-        vim.cmd.startinsert()
-      end
-    end)
-  end
-  return "<LeftMouse>"
 end, { expr = true, desc = "Click" })
 
-vim.keymap.set("t", "<LeftDrag>", function()
-  if drag and vim.api.nvim_win_is_valid(drag.win) then
+vim.keymap.set({ "n", "t" }, "<LeftDrag>", function()
+  if drag then
     local pos = vim.fn.getmousepos()
-    local info = vim.fn.getwininfo(drag.win)[1]
     vim.schedule(function()
-      if drag.kind == "vertical" then
-        vim.api.nvim_win_set_width(drag.win, math.max(pos.screencol - info.wincol, 1))
-      else
-        vim.api.nvim_win_set_height(drag.win, math.max(pos.screenrow - info.winrow, 1))
-      end
+      resize_to(pos)
     end)
+    return ""
   end
-  return ""
-end, { expr = true, desc = "Resize panels from a terminal" })
+  return vim.fn.mode() == "t" and "" or "<LeftDrag>"
+end, { expr = true, desc = "Drag a divider" })
 
-vim.keymap.set("t", "<LeftRelease>", function()
-  drag = nil
-  return ""
-end, { expr = true, desc = "Stop resizing" })
+vim.keymap.set({ "n", "t" }, "<LeftRelease>", function()
+  if drag then
+    drag = nil
+    return ""
+  end
+  return vim.fn.mode() == "t" and "" or "<LeftRelease>"
+end, { expr = true, desc = "Stop dragging" })
 
 -- Name on the start screen: ask once per machine, change it with :SetName
 vim.api.nvim_create_user_command("SetName", function(args)
