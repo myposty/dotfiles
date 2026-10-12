@@ -43,6 +43,40 @@ local function divider_at(pos)
   return nil, info
 end
 
+-- Resize pointer (<->) over dividers on macOS and Linux terminals that support
+-- OSC 22 (kitty, Ghostty, iTerm2, foot, xterm). Windows drops the sequence (ConPTY).
+if vim.fn.has("win32") == 0 then
+  vim.o.mousemoveevent = true
+  local shape = "default"
+  local function pointer(name)
+    if name == shape then
+      return
+    end
+    shape = name
+    local seq = "\27]22;" .. name .. "\27\\"
+    if vim.api.nvim_ui_send then
+      vim.api.nvim_ui_send(seq)
+    else
+      vim.fn.chansend(vim.v.stderr, seq)
+    end
+  end
+
+  vim.keymap.set({ "n", "i", "v", "t" }, "<MouseMove>", function()
+    local divider = divider_at(vim.fn.getmousepos())
+    local name = divider and (divider.kind == "vertical" and "ew-resize" or "ns-resize") or "default"
+    vim.schedule(function()
+      pointer(name)
+    end)
+    return ""
+  end, { expr = true, desc = "Resize pointer over dividers" })
+
+  vim.api.nvim_create_autocmd("VimLeavePre", {
+    callback = function()
+      pointer("default")
+    end,
+  })
+end
+
 vim.keymap.set("t", "<LeftMouse>", function()
   local pos = vim.fn.getmousepos()
   local divider, info = divider_at(pos)
