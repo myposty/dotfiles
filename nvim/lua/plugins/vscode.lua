@@ -55,6 +55,17 @@ return {
               "~/code",
             }),
             max_depth = 3,
+            -- Like VS Code "Open Folder": switch to the folder and show its file tree
+            confirm = function(picker, item)
+              picker:close()
+              if not item then
+                return
+              end
+              vim.schedule(function()
+                vim.cmd.cd(vim.fn.fnameescape(item.file))
+                Snacks.explorer.open({ cwd = item.file })
+              end)
+            end,
           },
         },
       },
