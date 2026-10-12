@@ -6,7 +6,10 @@ local opt = vim.opt
 opt.relativenumber = false -- absolute line numbers, like VS Code
 opt.mouse = "a"
 opt.clipboard = "unnamedplus"
-opt.wrap = false
+-- Long lines continue below instead of being cut, and follow the panel width
+opt.wrap = true
+opt.linebreak = true
+opt.breakindent = true
 opt.scrolloff = 8
 opt.tabstop = 2
 opt.shiftwidth = 2

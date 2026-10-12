@@ -53,9 +53,12 @@ return {
         preset = {
           keys = require("config.shortcuts").dashboard_keys(),
         },
+        width = 44,
         sections = {
-          function()
-            return { header = require("config.logo").header(), padding = 2 }
+          -- Re-drawn on every resize with the width of the start screen panel
+          function(self)
+            local width = self._size and self._size.width or vim.o.columns
+            return { header = require("config.logo").header(width), padding = 2 }
           end,
           { section = "keys", gap = 1, padding = 1 },
           { section = "startup" },

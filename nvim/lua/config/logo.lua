@@ -72,10 +72,10 @@ end
 
 -- Big letters when they fit the window; the first name only if the full one is
 -- too wide; plain text as the last resort.
-function M.header()
+function M.header(width)
   local name = M.get_name()
   local text = normalize(name ~= nil and name ~= "" and name or "Neovim")
-  local max = vim.o.columns - 4
+  local max = (width or vim.o.columns) - 4
   for _, candidate in ipairs({ text, text:match("^(%S+)") }) do
     local rows = draw(candidate)
     if vim.fn.strdisplaywidth(rows[1]) <= max then
