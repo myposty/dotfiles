@@ -60,7 +60,8 @@ On macOS inside WezTerm, `Cmd` works like in VS Code (`Cmd+P`, `Cmd+S`, `Cmd+Shi
 
 | What | File |
 |---|---|
-| Start screen logo | `nvim/lua/config/logo.lua` (text art, e.g. from [patorjk.com/software/taag](https://patorjk.com/software/taag)) |
+| Name on the start screen | Asked on the first start; change it with `:SetName` or `n` on the start screen. Stored per machine, not in this repo |
+| Logo letters | `nvim/lua/config/logo.lua` |
 | Shortcut list and start screen entries | `nvim/lua/config/shortcuts.lua` |
 | Key bindings | `nvim/lua/config/keymaps.lua` |
 

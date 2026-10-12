@@ -31,6 +31,7 @@ M.list = {
   { keys = "Ctrl+Z / Ctrl+Shift+Z", desc = "Undo / redo" },
   { keys = "Space", desc = "All LazyVim commands (menu)", run = function() require("which-key").show({ global = true }) end },
   { keys = ":Copilot auth", desc = "Sign in to Copilot (once)", run = function() vim.cmd("Copilot auth") end },
+  { keys = ":SetName", desc = "Change the name on the start screen", run = function() require("config.logo").ask() end },
   { keys = "F1", desc = "This list" },
 }
 
@@ -67,6 +68,7 @@ function M.dashboard_keys()
     end
   end
   keys[#keys + 1] = { key = "?", desc = ("%-20s %s"):format("All shortcuts", "F1"), action = M.open }
+  keys[#keys + 1] = { key = "n", desc = ("%-20s %s"):format("Change name", ":SetName"), action = function() require("config.logo").ask() end }
   keys[#keys + 1] = { key = "l", desc = ("%-20s %s"):format("Plugins", ":Lazy"), action = ":Lazy" }
   keys[#keys + 1] = { key = "q", desc = ("%-20s %s"):format("Quit", ":qa"), action = ":qa" }
   return keys
