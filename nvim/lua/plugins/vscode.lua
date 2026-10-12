@@ -27,6 +27,13 @@ return {
   {
     "folke/snacks.nvim",
     opts = {
+      -- Start screen: own logo (lua/config/logo.lua) and VS Code shortcuts (lua/config/shortcuts.lua)
+      dashboard = {
+        preset = {
+          header = require("config.logo"),
+          keys = require("config.shortcuts").dashboard_keys(),
+        },
+      },
       picker = {
         sources = {
           explorer = { hidden = true, ignored = true, layout = { layout = { position = "left" } } },

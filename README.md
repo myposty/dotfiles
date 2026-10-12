@@ -31,6 +31,8 @@ Run `:Copilot auth` once inside `nvim` to enable AI suggestions.
 
 ## Shortcuts
 
+Press `F1` (or `:Shortcuts`) inside nvim for the full list: type to filter, `Enter` runs it. `Space` opens the menu with every LazyVim command. The start screen shows the main ones.
+
 | Keys | Action |
 |---|---|
 | `Ctrl+P` | Find file |
@@ -53,6 +55,14 @@ Run `:Copilot auth` once inside `nvim` to enable AI suggestions.
 | `Tab` | Accept Copilot suggestion |
 
 On macOS inside WezTerm, `Cmd` works like in VS Code (`Cmd+P`, `Cmd+S`, `Cmd+Shift+P`, …).
+
+## Customize
+
+| What | File |
+|---|---|
+| Start screen logo | `nvim/lua/config/logo.lua` (text art, e.g. from [patorjk.com/software/taag](https://patorjk.com/software/taag)) |
+| Shortcut list and start screen entries | `nvim/lua/config/shortcuts.lua` |
+| Key bindings | `nvim/lua/config/keymaps.lua` |
 
 ## Why the terminal config matters
 

@@ -6,6 +6,10 @@ local map = vim.keymap.set
 
 vim.keymap.set('n', '<leader>c', '<cmd>bd<CR>', { desc = 'Cerrar buffer actual' })
 
+-- Shortcut list (F1 or :Shortcuts)
+map({ "n", "i" }, "<F1>", function() require("config.shortcuts").open() end, { desc = "All shortcuts" })
+vim.api.nvim_create_user_command("Shortcuts", function() require("config.shortcuts").open() end, {})
+
 -- Files and search
 map("n", "<C-p>", function() LazyVim.pick("files")() end, { desc = "Find files (Ctrl+P)" })
 map({ "n", "i", "v" }, "<C-S-p>", function() Snacks.picker.commands() end, { desc = "Command palette" })
