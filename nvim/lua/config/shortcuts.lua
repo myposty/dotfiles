@@ -14,6 +14,8 @@ M.list = {
   { keys = "Ctrl+B", desc = "Git changes panel (opens under the explorer)", run = function() require("config.scm").open() end },
   { keys = "Ctrl+B / Ctrl+Shift+E", desc = "File explorer (show / hide); Ctrl+Shift+E also from Claude", run = function() Snacks.explorer() end, home = "e", home_label = "File explorer", home_keys = "Ctrl+B" },
   { keys = "Space h", desc = "Start screen (logo and shortcuts)", run = function() Snacks.dashboard() end },
+  { keys = ":Settings", desc = "Open the nvim configuration files", run = function() require("config.shortcuts").settings() end },
+  { keys = ":DotfilesUpdate", desc = "Update the dotfiles from GitHub", run = function() vim.cmd("DotfilesUpdate") end },
   { keys = "Ctrl+`", desc = "Terminal (show / hide)", run = function() Snacks.terminal() end },
   { keys = "Space f T", desc = "New terminal", run = function() Snacks.terminal.open() end },
   { keys = "Ctrl+H/J/K/L", desc = "Go to the panel left / down / up / right" },
@@ -77,16 +79,32 @@ end
 -- Start screen entries: the shortcuts flagged with `home`, plus the list itself
 function M.dashboard_keys()
   local keys = {}
+  -- Nerd Font icons (Font Awesome range) per start screen key
+  local icons = {
+    o = "\u{f07c}", k = "\u{f114}", f = "\u{f15b}", r = "\u{f1da}", s = "\u{f002}", p = "\u{f120}",
+    c = "\u{f086}", g = "\u{f1d3}", e = "\u{f0e8}", ["?"] = "\u{f11c}", [","] = "\u{f013}",
+    n = "\u{f007}", l = "\u{f1e6}", q = "\u{f011}",
+  }
+  local function entry(key, label, keys_text, action)
+    return { icon = icons[key] .. " ", key = key, desc = ("%-20s %s"):format(label, keys_text), action = action }
+  end
   for _, s in ipairs(M.list) do
     if s.home then
-      keys[#keys + 1] = { key = s.home, desc = ("%-20s %s"):format(s.home_label or s.desc, s.home_keys or s.keys), action = s.run }
+      keys[#keys + 1] = entry(s.home, s.home_label or s.desc, s.home_keys or s.keys, s.run)
     end
   end
-  keys[#keys + 1] = { key = "?", desc = ("%-20s %s"):format("All shortcuts", "F1"), action = M.open }
-  keys[#keys + 1] = { key = "n", desc = ("%-20s %s"):format("Change name", ":SetName"), action = function() require("config.logo").ask() end }
-  keys[#keys + 1] = { key = "l", desc = ("%-20s %s"):format("Plugins", ":Lazy"), action = ":Lazy" }
-  keys[#keys + 1] = { key = "q", desc = ("%-20s %s"):format("Quit", ":qa"), action = ":qa" }
+  keys[#keys + 1] = entry("?", "All shortcuts", "F1", M.open)
+  keys[#keys + 1] = entry(",", "Settings", ":Settings", function() M.settings() end)
+  keys[#keys + 1] = entry("n", "Change name", ":SetName", function() require("config.logo").ask() end)
+  keys[#keys + 1] = entry("l", "Plugins", ":Lazy", ":Lazy")
+  keys[#keys + 1] = entry("q", "Quit", ":qa", ":qa")
   return keys
 end
+
+-- Settings: pick any file of this nvim configuration
+function M.settings()
+  Snacks.picker.files({ cwd = vim.fn.stdpath("config"), title = "Settings" })
+end
+vim.api.nvim_create_user_command("Settings", M.settings, { desc = "Open the nvim configuration files" })
 
 return M

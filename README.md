@@ -29,6 +29,8 @@ Running it again is safe. Tested on Windows 11 and a clean Debian 12.
 
 Run `:Copilot auth` once inside `nvim` to enable AI suggestions.
 
+**Updates:** a few seconds after nvim starts it checks GitHub in the background; when this repo has new commits it asks to update (fast-forward only, local edits are never overwritten). `:DotfilesUpdate` does it on demand. Works on Windows, macOS and Linux.
+
 ## Shortcuts
 
 Press `F1` (or `:Shortcuts`) inside nvim for the full list: type to filter, `Enter` runs it. `Space` opens the menu with every LazyVim command. The start screen shows the main ones.

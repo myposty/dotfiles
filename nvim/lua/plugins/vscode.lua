@@ -62,7 +62,7 @@ return {
         preset = {
           keys = require("config.shortcuts").dashboard_keys(),
         },
-        width = 44,
+        width = 48,
         -- Everything fits the panel height, never scrolls. Re-drawn on every resize:
         -- the git status gets only the rows left over (hidden if none), and on a
         -- short panel the big logo becomes a one-line name.

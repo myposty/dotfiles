@@ -321,3 +321,6 @@ end
 
 -- Source control panel that opens with the file explorer (lua/config/scm.lua)
 require("config.scm")
+
+-- Update check for the dotfiles repo on start (lua/config/updates.lua)
+require("config.updates")
