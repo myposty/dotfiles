@@ -108,6 +108,8 @@ for brew_bin in /opt/homebrew/bin/brew /usr/local/bin/brew /home/linuxbrew/.linu
 done
 export PATH="$HOME/.local/bin:$HOME/.local/nvim/bin:$PATH"
 export EDITOR=nvim VISUAL=nvim
+# dots: update everything (dotfiles, tools, plugins) without typing the installer path
+alias dots='bash "$HOME/dotfiles/install.sh"'
 # <<< dotfiles <<<
 EOF
 }

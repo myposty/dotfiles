@@ -1,5 +1,5 @@
--- Update check for the dotfiles repository. On start it fetches in the background
--- (never blocks) and, when GitHub has newer commits, asks to update. Works the
+-- Updates for the dotfiles repository. On start it fetches in the background
+-- (never blocks) and, when GitHub has newer commits, pulls them. Works the
 -- same on Windows, macOS and Linux: it only needs git.
 -- :DotfilesUpdate updates on demand.
 local M = {}
@@ -54,7 +54,8 @@ function M.apply(repo, done)
       pcall(function()
         require("lazy").restore({ show = false, wait = false })
       end)
-      vim.notify("Dotfiles updated. Restart nvim to use the new version.", vim.log.levels.INFO, { title = "Dotfiles" })
+      vim.notify("Dotfiles updated. Close nvim and open it again to use the new version.", vim.log.levels.WARN,
+        { title = "Dotfiles", timeout = 15000 })
     end
     if done then
       done(res.code == 0)
@@ -81,12 +82,14 @@ vim.api.nvim_create_user_command("DotfilesUpdate", function()
   end)
 end, { desc = "Update the dotfiles from GitHub" })
 
--- Background check a few seconds after start (only with a screen, never in headless runs)
+-- Background update a few seconds after start (only with a screen, never in headless
+-- runs): new commits are pulled without asking (fast-forward only, local edits are
+-- never touched) and apply the next time nvim opens
 if #vim.api.nvim_list_uis() > 0 then
   vim.defer_fn(function()
     M.check(function(count, repo)
       if count > 0 then
-        M.prompt(count, repo)
+        M.apply(repo)
       end
     end)
   end, 3000)

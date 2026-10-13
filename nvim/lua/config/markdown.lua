@@ -43,8 +43,12 @@ function M.toggle()
     install_parsers_then(buf, missing)
     return true
   end
+  local ok, err = pcall(function() require("render-markdown").set_buf(on) end)
+  if not ok then
+    vim.notify("Markdown preview failed: " .. tostring(err), vim.log.levels.ERROR)
+    return true
+  end
   vim.b[buf].md_preview = on
-  require("render-markdown").set_buf(on)
   vim.bo[buf].modifiable = not on
   -- a reading view: no line numbers or signs, like VS Code's preview
   if on then
