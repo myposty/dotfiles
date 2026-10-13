@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # macOS / Linux installer: installs missing tools, links nvim + wezterm to this
-# repo and pre-installs every plugin, language server and parser.
-# Safe to run more than once.
+# repo, adds the PATH exports to the shell profiles and pre-installs every plugin,
+# language server and parser. Safe to run more than once.
 set -euo pipefail
 
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -9,10 +9,17 @@ stamp="$(date +%Y%m%d-%H%M%S)"
 config="${XDG_CONFIG_HOME:-$HOME/.config}"
 local_bin="$HOME/.local/bin"
 mkdir -p "$local_bin"
-orig_path="$PATH"
-export PATH="$local_bin:$HOME/.local/nvim/bin:$PATH"
 
 have() { command -v "$1" >/dev/null 2>&1; }
+
+# Homebrew is often installed but not on PATH yet (Apple Silicon: /opt/homebrew)
+for brew_bin in /opt/homebrew/bin/brew /usr/local/bin/brew /home/linuxbrew/.linuxbrew/bin/brew; do
+  if [ -x "$brew_bin" ]; then
+    eval "$("$brew_bin" shellenv)"
+    break
+  fi
+done
+export PATH="$local_bin:$HOME/.local/nvim/bin:$PATH"
 
 if [ "$(id -u)" -eq 0 ]; then sudo=""; else sudo="sudo"; fi
 
@@ -27,14 +34,70 @@ nvim_ok() {
   have nvim && nvim --headless -c 'lua io.stdout:write(vim.fn.has("nvim-0.11") == 1 and "ok" or "old")' -c 'qa!' 2>/dev/null | grep -q ok
 }
 
+link() {
+  local src="$1" dest="$2"
+  mkdir -p "$(dirname "$dest")"
+  if [ -L "$dest" ] && [ "$(readlink "$dest")" = "$src" ]; then
+    echo "  already linked: $dest"
+    return
+  fi
+  if [ -e "$dest" ] || [ -L "$dest" ]; then
+    mv "$dest" "$dest.bak-$stamp"
+    echo "  backup: $dest.bak-$stamp"
+  fi
+  ln -s "$src" "$dest"
+  echo "  linked $dest -> $src"
+}
+
+# The config goes in first: whatever happens with the tools below, nvim opens LazyVim
+echo "== Neovim and WezTerm config"
+link "$repo/nvim" "$config/nvim"
+link "$repo/wezterm" "$config/wezterm"
+# ~/.wezterm.lua would win over ~/.config/wezterm/wezterm.lua
+if [ -e "$HOME/.wezterm.lua" ] && [ ! -L "$HOME/.wezterm.lua" ]; then
+  mv "$HOME/.wezterm.lua" "$HOME/.wezterm.lua.bak-$stamp"
+  echo "  backup: $HOME/.wezterm.lua.bak-$stamp"
+fi
+
+echo "== Shell profile (PATH for brew, nvim and the tools installed here)"
+profile_block() {
+  cat <<'EOF'
+# >>> dotfiles >>>
+for brew_bin in /opt/homebrew/bin/brew /usr/local/bin/brew /home/linuxbrew/.linuxbrew/bin/brew; do
+  if [ -x "$brew_bin" ]; then eval "$("$brew_bin" shellenv)"; break; fi
+done
+export PATH="$HOME/.local/bin:$HOME/.local/nvim/bin:$PATH"
+export EDITOR=nvim VISUAL=nvim
+# <<< dotfiles <<<
+EOF
+}
+for rc in "$HOME/.zshrc" "$HOME/.bashrc"; do
+  # zsh is the macOS default shell; bash everywhere else. Only touch the ones in use.
+  case "$rc" in
+    *zshrc) [ "$(uname)" = "Darwin" ] || [ -e "$rc" ] || continue ;;
+    *bashrc) [ "$(uname)" != "Darwin" ] || [ -e "$rc" ] || continue ;;
+  esac
+  touch "$rc"
+  # replace an earlier block instead of adding a second one
+  awk '/^# >>> dotfiles >>>$/{skip=1} !skip{print} /^# <<< dotfiles <<<$/{skip=0}' "$rc" > "$rc.dotfiles-tmp"
+  profile_block >> "$rc.dotfiles-tmp"
+  mv "$rc.dotfiles-tmp" "$rc"
+  echo "  updated $rc"
+done
+# macOS opens login shells: make bash read .bashrc there too
+if [ "$(uname)" = "Darwin" ] && [ -e "$HOME/.bashrc" ] && ! grep -qs "bashrc" "$HOME/.bash_profile"; then
+  echo '[ -f "$HOME/.bashrc" ] && . "$HOME/.bashrc"' >> "$HOME/.bash_profile"
+fi
+
 echo "== Tools"
 if [ "$(uname)" = "Darwin" ]; then
   if ! have brew; then
-    echo "  Homebrew is required: https://brew.sh"; exit 1
+    echo "  Homebrew is required: https://brew.sh (then run this again)"; exit 1
   fi
-  have cc || xcode-select --install || true
-  for pkg in neovim git ripgrep fd lazygit node tree-sitter python; do
-    brew list "$pkg" >/dev/null 2>&1 || brew install "$pkg"
+  have cc || xcode-select --install 2>/dev/null || true
+  # tree-sitter-cli is the tree-sitter command; the "tree-sitter" formula is only the library
+  for pkg in neovim git ripgrep fd lazygit node tree-sitter-cli python; do
+    brew list "$pkg" >/dev/null 2>&1 || brew install "$pkg" || echo "  could not install $pkg"
   done
   brew list --cask wezterm >/dev/null 2>&1 || brew install --cask wezterm || true
   brew list --cask font-caskaydia-cove-nerd-font >/dev/null 2>&1 || brew install --cask font-caskaydia-cove-nerd-font || true
@@ -66,44 +129,29 @@ if [ "$(uname)" != "Darwin" ]; then
     version="$(curl -fsSL https://api.github.com/repos/jesseduffield/lazygit/releases/latest | grep -o '"tag_name": *"v[^"]*"' | grep -o '[0-9][0-9.]*')"
     curl -fsSL "https://github.com/jesseduffield/lazygit/releases/download/v${version}/lazygit_${version}_Linux_${arch_lg}.tar.gz" | tar -xz -C "$local_bin" lazygit
   fi
-  if ! have tree-sitter; then
-    echo "  installing tree-sitter CLI"
-    npm install -g --silent --prefix "$HOME/.local" tree-sitter-cli
-  fi
 fi
-for t in nvim git rg fd lazygit node cc tree-sitter python3; do
-  have "$t" || { echo "  missing after install: $t"; exit 1; }
+# Last resort for the tree-sitter command on any OS: the npm package
+if ! have tree-sitter && have npm; then
+  echo "  installing tree-sitter CLI (npm)"
+  npm install -g --silent --prefix "$HOME/.local" tree-sitter-cli || true
+fi
+
+if ! nvim_ok; then
+  echo "  Neovim 0.11+ is missing: install it and run this again"; exit 1
+fi
+missing=""
+for t in git rg fd lazygit node cc tree-sitter python3; do
+  have "$t" || missing="$missing $t"
 done
-echo "  all tools present"
-
-link() {
-  local src="$1" dest="$2"
-  mkdir -p "$(dirname "$dest")"
-  if [ -L "$dest" ] && [ "$(readlink "$dest")" = "$src" ]; then
-    echo "  already linked: $dest"
-    return
-  fi
-  if [ -e "$dest" ] || [ -L "$dest" ]; then
-    mv "$dest" "$dest.bak-$stamp"
-    echo "  backup: $dest.bak-$stamp"
-  fi
-  ln -s "$src" "$dest"
-  echo "  linked $dest -> $src"
-}
-
-echo "== Neovim"
-link "$repo/nvim" "$config/nvim"
-
-echo "== WezTerm"
-link "$repo/wezterm" "$config/wezterm"
-# ~/.wezterm.lua would win over ~/.config/wezterm/wezterm.lua
-if [ -e "$HOME/.wezterm.lua" ] && [ ! -L "$HOME/.wezterm.lua" ]; then
-  mv "$HOME/.wezterm.lua" "$HOME/.wezterm.lua.bak-$stamp"
-  echo "  backup: $HOME/.wezterm.lua.bak-$stamp"
+if [ -n "$missing" ]; then
+  echo "  WARNING, still missing:$missing (nvim works; the features that need them do not)"
+else
+  echo "  all tools present"
 fi
 
 echo "== Plugins, language servers and parsers (first run takes a few minutes)"
 nvim --headless -c "luafile $repo/bootstrap.lua"
 
-case ":$orig_path:" in *":$local_bin:"*) ;; *) echo "Add to your shell profile: export PATH=\"\$HOME/.local/bin:\$PATH\"" ;; esac
-echo "Done. Open a new terminal and run: nvim"
+echo
+echo "Done. Load the new PATH in this terminal (or open a new one), then run nvim:"
+echo "  exec \$SHELL -l"
