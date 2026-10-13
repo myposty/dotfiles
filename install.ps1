@@ -111,6 +111,19 @@ if (-not $wt) {
   Write-Host "  $($keys.keybindings.Count) nvim key bindings in place (backup: $wt.bak-$stamp)"
 }
 
+Write-Host "== Claude Code"
+# the panel on Ctrl+Shift+A / Alt+C runs it: Anthropic's official installer when missing
+if (Get-Command claude -ErrorAction SilentlyContinue) {
+  Write-Host "  already installed"
+} else {
+  try {
+    Invoke-RestMethod https://claude.ai/install.ps1 | Invoke-Expression
+    Refresh-Path
+  } catch {
+    Write-Host "  could not install Claude Code (https://claude.com/claude-code)"
+  }
+}
+
 Write-Host "== Shell profiles (nvim restarts itself after a dotfiles update)"
 # nvim quits leaving a marker after an update; these `nvim` functions open it again
 # where it was. The marker is renamed before reopening, so it can never loop.

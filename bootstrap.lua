@@ -21,7 +21,11 @@ end
 local ok, err = pcall(function()
   -- 1. Plugins
   say("[1/4] plugins")
-  require("lazy").sync({ wait = true, show = false })
+  -- install, then put every plugin on the version pinned in lazy-lock.json: a sync
+  -- would update them and rewrite the lock file, leaving the repo modified (and
+  -- the automatic update could no longer pull)
+  require("lazy").install({ wait = true, show = false })
+  require("lazy").restore({ wait = true, show = false })
   for _, p in pairs(require("lazy.core.config").plugins) do
     if not p._.installed then
       table.insert(failed, "plugin " .. p.name)

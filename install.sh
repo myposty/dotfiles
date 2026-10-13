@@ -255,6 +255,11 @@ if [ "$(uname)" != "Darwin" ]; then
     fi
   fi
 fi
+# Claude Code (the panel on Ctrl+Shift+A / Alt+C runs it): Anthropic's official installer
+if ! have claude; then
+  echo "  installing Claude Code"
+  curl -fsSL https://claude.ai/install.sh | bash >/dev/null 2>&1 || echo "  could not install Claude Code (https://claude.com/claude-code)"
+fi
 # Last resort for the tree-sitter command on any OS: the npm package
 if ! have tree-sitter && have npm; then
   echo "  installing tree-sitter CLI (npm)"

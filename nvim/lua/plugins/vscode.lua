@@ -290,7 +290,8 @@ return {
               .. (ahead and ("  ·  " .. ahead .. " to push") or "")
               .. (behind and ("  ·  " .. behind .. " to pull") or "")
             local items = {
-              { title = "Git  (Ctrl+Shift+G: commit, push, merge)", padding = 1 },
+              { title = "Git  (" .. require("config.shortcuts").entry_label({ keys = "Ctrl+Shift+G", alt = "Alt+G" })
+                .. ": commit, push, merge)", padding = 1 },
               { text = { { summary, hl = "SnacksDashboardKey" } }, align = "center" },
             }
             local room = free - 4
