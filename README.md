@@ -35,56 +35,51 @@ Run `:Copilot auth` once inside `nvim` to enable AI suggestions.
 
 Press `F1` (or `:Shortcuts`) inside nvim for the full list: type to filter, `Enter` runs it. `Space` opens the menu with every LazyVim command. The start screen shows the main ones.
 
-| Keys | Action |
-|---|---|
-| `Ctrl+P` | Find file |
-| `Ctrl+Shift+P` | Command palette |
-| `Ctrl+Shift+F` | Search in project |
-| `Ctrl+Shift+O` | Open folder (project list) |
-| `Ctrl+Shift+K` | Browse folders (`Enter` goes in, `..` goes up) |
-| `Ctrl+B` | File explorer |
-| `Ctrl+W` or the tab's X / `Ctrl+Tab` | Close file / next tab |
-| `Ctrl+S` | Save (formats with Prettier) |
-| `Ctrl+/` | Toggle comment |
-| `Ctrl+D` | Multi-cursor on next match |
-| `Alt+↑/↓` | Move line |
-| `Shift+Alt+F` | Format |
-| `F2` / `F12` / `Shift+F12` | Rename / go to definition / references |
-| `Ctrl+.` | Quick fix |
-| `` Ctrl+` `` | Terminal (show / hide) |
-| `Ctrl+1/2/3` / `Ctrl+0` | Go to editor 1/2/3 / file explorer |
-| `Ctrl+\` | Split editor |
-| `Ctrl+J` / ``Ctrl+Shift+` `` | Terminal show-hide / new terminal |
-| `Ctrl+G` | Go to line |
-| `Ctrl+H` / `Ctrl+Shift+H` | Replace in file / in project |
-| `Ctrl+L` / `Ctrl+Shift+L` | Select line / all occurrences |
-| `Ctrl+Enter` / `Ctrl+Shift+Enter` | New line below / above |
-| `Ctrl+Shift+V` / `Ctrl+K V` | Markdown: rendered preview / back to editing (`Ctrl+K V` works in every terminal; Windows Terminal and macOS Terminal.app keep `Ctrl/Cmd+Shift+V` for paste) |
-| Click a file path in Claude or a terminal | Open it in the editor (a numbered diff line opens at that line) |
-| `Alt+Z` | Toggle word wrap |
-| `F3` / `Shift+F3` | Next / previous match |
-| `Ctrl+,` | Settings |
-| `Ctrl+Arrows` | Resize panel (or drag the border) |
-| `Space w H/J/K/L` | Move panel left / down / up / right |
-| `Ctrl+Shift+G` | Git (lazygit) |
-| (with the explorer) | Git changes panel under the file tree: live status, `s` stage, `c` commit, `p` push, `P` pull |
-| `Ctrl+Shift+A` | Claude Code panel |
-| `Ctrl+Alt+K` | Send selection or file to Claude |
-| `Tab` | Accept Copilot suggestion |
+| Action | Windows | Linux | Mac |
+|---|---|---|---|
+| Find file | `Ctrl+P` | `Ctrl+P` | `Cmd+P` |
+| Command palette | `Ctrl+Shift+P` | `Ctrl+Shift+P` | `Cmd+Shift+P` |
+| Search in project | `Ctrl+Shift+F` | `Ctrl+Shift+F` | `Cmd+Shift+F` |
+| Open folder (project list) | `Ctrl+Shift+O` | `Ctrl+Shift+O` | `Cmd+Shift+O` |
+| Open folder by name (type to search) | `Ctrl+Shift+K` | `Ctrl+Shift+K` | `Cmd+Shift+K` |
+| File explorer | `Ctrl+B` | `Ctrl+B` | `Cmd+B` |
+| Close file / next tab | `Ctrl+W` / `Ctrl+Tab` | `Ctrl+W` / `Ctrl+Tab` | `Cmd+W` / `Cmd+Shift+]` |
+| Save (formats with Prettier) | `Ctrl+S` | `Ctrl+S` | `Cmd+S` |
+| Undo / redo | `Ctrl+Z` / `Ctrl+Shift+Z` | `Ctrl+Z` / `Ctrl+Shift+Z` | `Cmd+Z` / `Cmd+Shift+Z` |
+| Select all | `Ctrl+A` | `Ctrl+A` | `Cmd+A` |
+| Toggle comment | `Ctrl+/` | `Ctrl+/` | `Cmd+/` |
+| Multi-cursor on next match | `Ctrl+D` | `Ctrl+D` | `Cmd+D` |
+| Move line | `Alt+Up/Down` | `Alt+Up/Down` | `Option+Up/Down` |
+| Format document | `Shift+Alt+F` | `Shift+Alt+F` | `Shift+Option+F` |
+| Rename / go to definition / references | `F2` / `F12` / `Shift+F12` | `F2` / `F12` / `Shift+F12` | `F2` / `F12` / `Shift+F12` |
+| Quick fix | `Ctrl+.` | `Ctrl+.` | `Cmd+.` |
+| Terminal show-hide / new terminal | `Ctrl+J` / `` Ctrl+Shift+` `` | `Ctrl+J` / `` Ctrl+Shift+` `` | `Cmd+J` / `` Cmd+Shift+` `` |
+| Terminal show-hide (alternative) | `` Ctrl+` `` | `` Ctrl+` `` | `` Ctrl+` `` |
+| Go to editor 1/2/3 / file explorer | `Ctrl+1/2/3` / `Ctrl+0` | `Ctrl+1/2/3` / `Ctrl+0` | `Cmd+1/2/3` / `Cmd+0` |
+| Split editor | `Ctrl+\` | `Ctrl+\` | `Cmd+\` |
+| Go to line | `Ctrl+G` | `Ctrl+G` | `Cmd+G` |
+| Replace in file / in project | `Ctrl+H` / `Ctrl+Shift+H` | `Ctrl+H` / `Ctrl+Shift+H` | `Cmd+Option+F` / `Cmd+Shift+H` |
+| Select line / all occurrences | `Ctrl+L` / `Ctrl+Shift+L` | `Ctrl+L` / `Ctrl+Shift+L` | `Cmd+L` / `Cmd+Shift+L` |
+| New line below / above | `Ctrl+Enter` / `Ctrl+Shift+Enter` | `Ctrl+Enter` / `Ctrl+Shift+Enter` | `Cmd+Enter` / `Cmd+Shift+Enter` |
+| Markdown: preview / edit (or click Preview) | `Ctrl+Shift+V` / `Ctrl+K V` | `Ctrl+Shift+V` / `Ctrl+K V` | `Cmd+Shift+V` / `Cmd+K V` |
+| Toggle word wrap | `Alt+Z` | `Alt+Z` | `Option+Z` |
+| Next / previous match | `F3` / `Shift+F3` | `F3` / `Shift+F3` | `F3` / `Shift+F3` |
+| Settings | `Ctrl+,` | `Ctrl+,` | `Cmd+,` |
+| Resize panel (or drag the border) | `Ctrl+Arrows` | `Ctrl+Arrows` | `Ctrl+Arrows` |
+| Git (lazygit) | `Ctrl+Shift+G` | `Ctrl+Shift+G` | `Cmd+Shift+G` |
+| Claude Code panel | `Ctrl+Shift+A` | `Ctrl+Shift+A` | `Cmd+Shift+A` |
+| Send selection or file to Claude | `Ctrl+Alt+K` | `Ctrl+Alt+K` | `Cmd+Option+K` |
+| Start / end of line | `Home` / `End` | `Home` / `End` | `Cmd+Left` / `Cmd+Right` |
+| Previous / next word | `Alt+Left` / `Alt+Right` | `Alt+Left` / `Alt+Right` | `Option+Left` / `Option+Right` |
+| Delete the previous word | `Alt+Backspace` | `Alt+Backspace` | `Option+Backspace` |
+| Accept Copilot suggestion | `Tab` | `Tab` | `Tab` |
+| All shortcuts (type to filter) | `F1` | `F1` | `F1` |
 
-### macOS (WezTerm)
+Everywhere: click a file path in Claude or a terminal to open it (a numbered diff line opens at that line); `Space` opens every LazyVim command; with the explorer open, the Git changes panel sits under the file tree (`s` stage, `c` commit, `p` push, `P` pull).
 
-`Cmd` replaces `Ctrl` like in VS Code for Mac: `Cmd+P`, `Cmd+S`, `Cmd+Shift+P`, `Cmd+Shift+F`, `Cmd+B`, `Cmd+W`, `Cmd+/`, `Cmd+D`, `Cmd+Z` / `Cmd+Shift+Z`, `Cmd+A`, `Cmd+C` / `Cmd+X`, `Cmd+.`, `Cmd+,` (settings), `Cmd+Shift+[` / `]` (tabs), `Cmd+Option+K` (send to Claude), `Cmd+G`, `Cmd+Option+F` / `Cmd+Shift+H` (replace), `Cmd+L` / `Cmd+Shift+L`, `Cmd+Enter`, `Cmd+J`, `Cmd+\`, `Cmd+1/2/3`, `Cmd+0`, `Cmd+Shift+V` (markdown preview). In short: every shortcut in this list uses `Cmd` instead of `Ctrl` on a Mac. Mac text navigation works too:
+**Mac.** The Mac column works in WezTerm. macOS Terminal.app keeps every `Cmd` key for itself, so there use the Windows / Linux keys (`Ctrl+Shift+A` opens Claude, `Ctrl+K V` the markdown preview).
 
-| Keys | Action |
-|---|---|
-| `Cmd+←` / `Cmd+→` | Start / end of line |
-| `Cmd+↑` / `Cmd+↓` | Start / end of file |
-| `Cmd+Backspace` | Delete to the start of the line |
-| `Option+←` / `Option+→` | Previous / next word |
-| `Option+Backspace` | Delete the previous word |
-
-The terminal stays on ``Ctrl+` `` (same as VS Code for Mac; macOS uses ``Cmd+` `` to switch windows).
+**Windows.** In Windows Terminal, outside nvim, paste with `Ctrl+V`: `Ctrl+Shift+V` goes to nvim (markdown preview).
 
 ## Editing like VS Code
 
