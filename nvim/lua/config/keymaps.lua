@@ -53,7 +53,18 @@ map(ANY, "<C-PageUp>", "<cmd>bprevious<cr>", { desc = "Previous tab" })
 map({ "n", "i", "v", "s" }, "<C-s>", "<cmd>w<cr>", { desc = "Save" })
 map({ "n", "i" }, "<C-z>", "<cmd>undo<cr>", { desc = "Undo" })
 map({ "n", "i" }, "<C-S-z>", "<cmd>redo<cr>", { desc = "Redo" })
-map({ "n", "i" }, "<C-a>", "<esc>ggVG", { desc = "Select all" })
+-- macOS Terminal (and other Mac terminals but WezTerm) send Ctrl+Shift+A as Ctrl+A,
+-- and select all there is Cmd+A, which the terminal keeps: Ctrl+A opens Claude
+local mac_plain_terminal = (vim.uv.os_uname().sysname == "Darwin" or vim.env.NVIM_FORCE_MAC == "1")
+  and vim.env.TERM_PROGRAM ~= "WezTerm" and vim.env.WEZTERM_PANE == nil
+if mac_plain_terminal then
+  map({ "n", "i", "v" }, "<C-a>", function()
+    require("lazy").load({ plugins = { "claudecode.nvim" } })
+    vim.cmd("ClaudeCodeFocus")
+  end, { desc = "Claude Code" })
+else
+  map({ "n", "i" }, "<C-a>", "<esc>ggVG", { desc = "Select all" })
+end
 map("v", "<C-c>", '"+y', { desc = "Copy" })
 map("v", "<C-x>", '"+d', { desc = "Cut" })
 map("i", "<C-v>", "<C-r>+", { desc = "Paste" })
