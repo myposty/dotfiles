@@ -79,7 +79,8 @@ local MAC_KEYS = {
   ["Ctrl+Tab"] = "Cmd+Shift+]",
   ["Ctrl+`"] = "Ctrl+`",
   ["Ctrl+Arrows"] = "Ctrl+Arrows",
-  ["Ctrl+Shift+V / Ctrl+K V"] = "Cmd+Shift+V",
+  -- Terminal.app keeps Cmd+Shift+V (paste); Ctrl+K V reaches nvim in every terminal
+  ["Ctrl+Shift+V / Ctrl+K V"] = "Cmd+Shift+V / Ctrl+K V",
 }
 
 -- The keys of a shortcut as they are pressed on this machine

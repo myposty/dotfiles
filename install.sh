@@ -60,14 +60,43 @@ link() {
   echo "  linked $dest -> $src"
 }
 
+# Which terminal nvim is used in: asked once and remembered. Ask again with
+# `bash install.sh --terminal`, or set DOTFILES_TERMINAL=system|wezterm.
+choice_file="$config/dotfiles/terminal"
+terminal="${DOTFILES_TERMINAL:-}"
+if [ -z "$terminal" ] && [ "${1:-}" != "--terminal" ] && [ -f "$choice_file" ]; then
+  terminal="$(cat "$choice_file")"
+fi
+if [ "$terminal" != "system" ] && [ "$terminal" != "wezterm" ]; then
+  terminal="system"
+  if [ -t 0 ]; then
+    if [ "$(uname)" = "Darwin" ]; then system_name="Terminal.app (the one macOS comes with)"; else system_name="the terminal you use now"; fi
+    echo "Which terminal do you want to use nvim in?"
+    echo "  1) $system_name"
+    if [ "$(uname)" = "Darwin" ]; then
+      echo "     Looks the same, but macOS keeps Cmd and Ctrl+Shift shortcuts: use the Ctrl ones."
+    fi
+    echo "  2) WezTerm (gets installed)"
+    echo "     Every shortcut works, Cmd+P, Cmd+Shift+P... included."
+    printf "Choose 1 or 2 [1]: "
+    read -r answer || answer=""
+    if [ "$answer" = "2" ]; then terminal="wezterm"; fi
+  fi
+fi
+mkdir -p "$(dirname "$choice_file")"
+echo "$terminal" > "$choice_file"
+echo "== Terminal: $terminal"
+
 # The config goes in first: whatever happens with the tools below, nvim opens LazyVim
-echo "== Neovim and WezTerm config"
+echo "== Neovim config"
 link "$repo/nvim" "$config/nvim"
-link "$repo/wezterm" "$config/wezterm"
-# ~/.wezterm.lua would win over ~/.config/wezterm/wezterm.lua
-if [ -e "$HOME/.wezterm.lua" ] && [ ! -L "$HOME/.wezterm.lua" ]; then
-  mv "$HOME/.wezterm.lua" "$HOME/.wezterm.lua.bak-$stamp"
-  echo "  backup: $HOME/.wezterm.lua.bak-$stamp"
+if [ "$terminal" = "wezterm" ]; then
+  link "$repo/wezterm" "$config/wezterm"
+  # ~/.wezterm.lua would win over ~/.config/wezterm/wezterm.lua
+  if [ -e "$HOME/.wezterm.lua" ] && [ ! -L "$HOME/.wezterm.lua" ]; then
+    mv "$HOME/.wezterm.lua" "$HOME/.wezterm.lua.bak-$stamp"
+    echo "  backup: $HOME/.wezterm.lua.bak-$stamp"
+  fi
 fi
 
 echo "== Shell profile (PATH for brew, nvim and the tools installed here)"
@@ -115,11 +144,13 @@ if [ "$(uname)" = "Darwin" ]; then
   for pkg in neovim git ripgrep fd lazygit node tree-sitter-cli python; do
     brew list "$pkg" >/dev/null 2>&1 || brew install "$pkg" || echo "  could not install $pkg"
   done
-  # WezTerm is the terminal this setup is made for: it forwards Cmd to nvim
-  brew list --cask wezterm >/dev/null 2>&1 || brew install --cask wezterm
+  # the icons font, for whichever terminal
   brew list --cask font-caskaydia-cove-nerd-font >/dev/null 2>&1 || brew install --cask font-caskaydia-cove-nerd-font
-  # macOS Terminal.app looks like WezTerm too: Nerd Font (icons), dark Monokai Soda
-  # colors, and Option as Meta (Option+Z, Option+arrows). Changes its default profile.
+  if [ "$terminal" = "wezterm" ]; then
+    brew list --cask wezterm >/dev/null 2>&1 || brew install --cask wezterm
+  else
+  # Terminal.app: Nerd Font (icons), dark Monokai Soda colors and Option as Meta
+  # (Option+Z, Option+arrows). Changes its default profile.
   osascript <<'OSA' >/dev/null 2>&1 || echo "  could not set up Terminal.app (System Settings > Privacy > Automation)"
 tell application "Terminal"
   set s to default settings
@@ -136,6 +167,7 @@ OSA
     "$HOME/Library/Preferences/com.apple.Terminal.plist" 2>/dev/null \
     || /usr/libexec/PlistBuddy -c "Add ':Window Settings:$term_profile:useOptionAsMetaKey' bool true" \
       "$HOME/Library/Preferences/com.apple.Terminal.plist" 2>/dev/null || true
+  fi
   # zsh is the shell everywhere on the Mac (WezTerm starts it too)
   if [ "$(basename "${SHELL:-}")" != "zsh" ]; then
     chsh -s /bin/zsh || echo "  could not make zsh the default shell (run: chsh -s /bin/zsh)"
@@ -145,7 +177,7 @@ elif have apt-get; then
   $sudo apt-get install -y -qq git curl tar unzip gcc make ripgrep fd-find nodejs npm python3 python3-venv gpg >/dev/null
   # Debian/Ubuntu name the fd binary "fdfind"
   have fd || ln -sf "$(command -v fdfind)" "$local_bin/fd"
-  if ! have wezterm; then
+  if [ "$terminal" = "wezterm" ] && ! have wezterm; then
     # official WezTerm apt repository
     curl -fsSL https://apt.fury.io/wez/gpg.key | $sudo gpg --yes --dearmor -o /usr/share/keyrings/wezterm-fury.gpg
     echo 'deb [signed-by=/usr/share/keyrings/wezterm-fury.gpg] https://apt.fury.io/wez/ * *' | $sudo tee /etc/apt/sources.list.d/wezterm.list >/dev/null
@@ -153,11 +185,14 @@ elif have apt-get; then
   fi
 elif have dnf; then
   $sudo dnf install -y -q git curl tar unzip gcc make ripgrep fd-find nodejs npm python3
-  if ! have wezterm; then
+  if [ "$terminal" = "wezterm" ] && ! have wezterm; then
     $sudo dnf copr enable -y wezfurlong/wezterm-nightly && $sudo dnf install -y -q wezterm || echo "  could not install WezTerm"
   fi
 elif have pacman; then
-  $sudo pacman -S --needed --noconfirm git curl tar unzip gcc make ripgrep fd nodejs npm python neovim lazygit wezterm
+  $sudo pacman -S --needed --noconfirm git curl tar unzip gcc make ripgrep fd nodejs npm python neovim lazygit
+  if [ "$terminal" = "wezterm" ]; then
+    $sudo pacman -S --needed --noconfirm wezterm || echo "  could not install WezTerm"
+  fi
 else
   echo "  unknown package manager: install git, curl, gcc, ripgrep, fd, node, npm and python3, then run again"
   exit 1
@@ -203,9 +238,10 @@ nvim --headless -c "luafile $repo/bootstrap.lua"
 echo
 in_wezterm=""
 if [ "${TERM_PROGRAM:-}" = "WezTerm" ] || [ -n "${WEZTERM_PANE:-}" ]; then in_wezterm=1; fi
-if [ "$(uname)" = "Darwin" ] && [ -z "$in_wezterm" ]; then
-  echo "Terminal.app is set up too. Cmd shortcuts (Cmd+P, Cmd+Shift+P...) only reach nvim in WezTerm;"
-  echo "in Terminal.app use the Ctrl ones that macOS lets through (Ctrl+P, Ctrl+B, Ctrl+S...)."
+if [ "$terminal" = "wezterm" ] && [ -z "$in_wezterm" ] && [ "$(uname)" = "Darwin" ] && [ -d "/Applications/WezTerm.app" ]; then
+  echo "Done. Opening WezTerm: run nvim there."
+  open -a WezTerm
+  exit 0
 fi
 echo "Done. nvim is ready."
 # Leave the user in a shell that already has the new PATH (nothing to reload by hand)

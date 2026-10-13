@@ -11,7 +11,7 @@ git clone https://github.com/myposty/dotfiles.git ~/dotfiles
 | System | Command |
 |---|---|
 | Windows | `powershell -ExecutionPolicy Bypass -File ~/dotfiles/install.ps1` |
-| macOS / Linux | `bash ~/dotfiles/install.sh` (updates itself, installs Homebrew and WezTerm (zsh on macOS), sets the PATH in `~/.zshrc` / `~/.bashrc` and leaves you in a ready shell) |
+| macOS / Linux | `bash ~/dotfiles/install.sh` (updates itself, asks once whether to use the system terminal or WezTerm (again with `--terminal`), installs Homebrew, zsh on macOS, sets the PATH in `~/.zshrc` / `~/.bashrc` and leaves you in a ready shell) |
 
 The installer:
 
@@ -59,7 +59,7 @@ Press `F1` (or `:Shortcuts`) inside nvim for the full list: type to filter, `Ent
 | `Ctrl+H` / `Ctrl+Shift+H` | Replace in file / in project |
 | `Ctrl+L` / `Ctrl+Shift+L` | Select line / all occurrences |
 | `Ctrl+Enter` / `Ctrl+Shift+Enter` | New line below / above |
-| `Ctrl+Shift+V` / `Ctrl+K V` | Markdown: rendered preview / back to editing (Windows Terminal: `Ctrl+K V`, since `Ctrl+Shift+V` pastes there) |
+| `Ctrl+Shift+V` / `Ctrl+K V` | Markdown: rendered preview / back to editing (`Ctrl+K V` works in every terminal; Windows Terminal and macOS Terminal.app keep `Ctrl/Cmd+Shift+V` for paste) |
 | Click a file path in Claude or a terminal | Open it in the editor (a numbered diff line opens at that line) |
 | `Alt+Z` | Toggle word wrap |
 | `F3` / `Shift+F3` | Next / previous match |
