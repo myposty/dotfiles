@@ -10,7 +10,8 @@ repo="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [ -z "${DOTFILES_PULLED:-}" ] && git -C "$repo" rev-parse --abbrev-ref '@{u}' >/dev/null 2>&1; then
   before="$(git -C "$repo" rev-parse HEAD)"
   echo "== Updating dotfiles"
-  git -C "$repo" pull --ff-only -q || echo "  could not update (local changes?), installing this version"
+  # public repo: never ask for credentials (no keychain dialog, no password prompt)
+  GIT_TERMINAL_PROMPT=0 git -c credential.helper= -C "$repo" pull --ff-only -q || echo "  could not update (local changes?), installing this version"
   if [ "$(git -C "$repo" rev-parse HEAD)" != "$before" ]; then
     DOTFILES_PULLED=1 exec bash "$repo/install.sh" "$@"
   fi
