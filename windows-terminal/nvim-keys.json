@@ -22,7 +22,8 @@
     { "command": { "action": "sendInput", "input": "\u001b[51;5u" }, "id": "User.nvim.C3" },
     { "command": { "action": "sendInput", "input": "\u001b[48;5u" }, "id": "User.nvim.C0" },
     { "command": { "action": "sendInput", "input": "\u001b[96;6u" }, "id": "User.nvim.CSBacktick" },
-    { "command": { "action": "sendInput", "input": "\u001b[108;6u" }, "id": "User.nvim.CSL" }
+    { "command": { "action": "sendInput", "input": "\u001b[108;6u" }, "id": "User.nvim.CSL" },
+    { "command": { "action": "sendInput", "input": "\u001b[118;6u" }, "id": "User.nvim.CSV" }
   ],
   "keybindings": [
     { "id": "User.nvim.CSP", "keys": "ctrl+shift+p" },
@@ -47,6 +48,7 @@
     { "id": "User.nvim.C3", "keys": "ctrl+3" },
     { "id": "User.nvim.C0", "keys": "ctrl+0" },
     { "id": "User.nvim.CSBacktick", "keys": "ctrl+shift+`" },
-    { "id": "User.nvim.CSL", "keys": "ctrl+shift+l" }
+    { "id": "User.nvim.CSL", "keys": "ctrl+shift+l" },
+    { "id": "User.nvim.CSV", "keys": "ctrl+shift+v" }
   ]
 }
