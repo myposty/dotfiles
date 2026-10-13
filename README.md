@@ -11,7 +11,7 @@ git clone https://github.com/myposty/dotfiles.git ~/dotfiles
 | System | Command |
 |---|---|
 | Windows | `powershell -ExecutionPolicy Bypass -File ~/dotfiles/install.ps1` |
-| macOS / Linux | `bash ~/dotfiles/install.sh`, then `exec $SHELL -l` (loads the PATH it adds to `~/.zshrc` / `~/.bashrc`) |
+| macOS / Linux | `bash ~/dotfiles/install.sh` (updates itself, installs Homebrew if missing, sets the PATH in `~/.zshrc` / `~/.bashrc` and leaves you in a ready shell) |
 
 The installer:
 

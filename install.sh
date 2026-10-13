@@ -5,6 +5,17 @@
 set -euo pipefail
 
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Always install the latest version: pull, and if anything changed run the new script
+if [ -z "${DOTFILES_PULLED:-}" ] && git -C "$repo" rev-parse --abbrev-ref '@{u}' >/dev/null 2>&1; then
+  before="$(git -C "$repo" rev-parse HEAD)"
+  echo "== Updating dotfiles"
+  git -C "$repo" pull --ff-only -q || echo "  could not update (local changes?), installing this version"
+  if [ "$(git -C "$repo" rev-parse HEAD)" != "$before" ]; then
+    DOTFILES_PULLED=1 exec bash "$repo/install.sh" "$@"
+  fi
+fi
+
 stamp="$(date +%Y%m%d-%H%M%S)"
 config="${XDG_CONFIG_HOME:-$HOME/.config}"
 local_bin="$HOME/.local/bin"
@@ -92,7 +103,12 @@ fi
 echo "== Tools"
 if [ "$(uname)" = "Darwin" ]; then
   if ! have brew; then
-    echo "  Homebrew is required: https://brew.sh (then run this again)"; exit 1
+    # the official installer; it also installs the Xcode command line tools (C compiler)
+    echo "  installing Homebrew (asks for your Mac password)"
+    NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    for brew_bin in /opt/homebrew/bin/brew /usr/local/bin/brew; do
+      if [ -x "$brew_bin" ]; then eval "$("$brew_bin" shellenv)"; break; fi
+    done
   fi
   have cc || xcode-select --install 2>/dev/null || true
   # tree-sitter-cli is the tree-sitter command; the "tree-sitter" formula is only the library
@@ -153,5 +169,8 @@ echo "== Plugins, language servers and parsers (first run takes a few minutes)"
 nvim --headless -c "luafile $repo/bootstrap.lua"
 
 echo
-echo "Done. Load the new PATH in this terminal (or open a new one), then run nvim:"
-echo "  exec \$SHELL -l"
+echo "Done. nvim is ready."
+# Leave the user in a shell that already has the new PATH (nothing to reload by hand)
+if [ -t 0 ] && [ -t 1 ]; then
+  exec "${SHELL:-/bin/bash}" -l
+fi
