@@ -161,4 +161,17 @@ Write-Host "== Plugins, language servers and parsers (first run takes a few minu
 nvim --headless -c "luafile $($repo -replace '\\', '/')/bootstrap.lua"
 if ($LASTEXITCODE -ne 0) { throw "nvim bootstrap failed (see FAILED line above)" }
 
-Write-Host "Done. Open a new terminal and run: nvim"
+if ([Environment]::UserInteractive -and -not [Console]::IsOutputRedirected -and -not [Console]::IsInputRedirected -and $env:DOTFILES_NO_LAUNCH -ne "1") {
+  Write-Host "Done. Opening nvim (your recent sessions are on the start screen: press 1 for the last one)."
+  # same loop as the profile function: an update leaves a marker and nvim reopens in place
+  $marker = Join-Path $env:LOCALAPPDATA "nvim-data\dotfiles-restart.json"
+  $env:NVIM_RESTART_WRAPPER = "1"
+  & nvim.exe
+  while (Test-Path $marker) {
+    Move-Item -Force $marker "$marker.resume"
+    & nvim.exe -c "lua require('config.updates').resume()"
+  }
+  Remove-Item Env:\NVIM_RESTART_WRAPPER -ErrorAction SilentlyContinue
+} else {
+  Write-Host "Done. Open a new terminal and run: nvim"
+}

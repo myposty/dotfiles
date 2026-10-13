@@ -16,6 +16,7 @@ M.list = {
   { keys = "Ctrl+B", desc = "Git changes panel (opens under the explorer)", run = function() require("config.scm").open() end },
   { keys = "Ctrl+B / Ctrl+Shift+E", alt = "Ctrl+B / Alt+E", desc = "File explorer (show / hide); Ctrl+Shift+E / Alt+E also from Claude", run = function() Snacks.explorer() end, home = "e", home_label = "File explorer", home_keys = "Ctrl+B" },
   { keys = "Space h", desc = "Start screen (logo and shortcuts)", run = function() Snacks.dashboard() end },
+  { keys = "1 … 5 on the start screen / :Sessions", desc = "Reopen a recent session (folder, files, splits)", run = function() vim.cmd("Sessions") end },
   { keys = ":Settings", desc = "Open the nvim configuration files", run = function() require("config.shortcuts").settings() end },
   { keys = ":DotfilesUpdate", desc = "Update the dotfiles from GitHub", run = function() vim.cmd("DotfilesUpdate") end },
   { keys = "Ctrl+`", desc = "Terminal (show / hide)", run = function() Snacks.terminal() end },

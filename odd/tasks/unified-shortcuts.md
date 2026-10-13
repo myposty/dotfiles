@@ -63,3 +63,12 @@ Off (config repo, no test runner); functional pty checks instead.
 - Regression: markdown preview keys ok, Claude links 16/16, F1 62 items, wezterm show-keys
   (normal and Mac) no errors, install.sh syntax ok.
 - Not run here: real macOS / Linux machines (Terminal.app font detection, Linux font install).
+
+## Follow-up: sessions and launch after install (accepted 2026-10-13)
+- [x] T6 Start screen lists recent sessions (persistence.nvim), keys 1-5, 1 = last; :Sessions lists all;
+      temp folders filtered; branch shown as "⎇ feat/x"; fits the row budget. (delegated writer)
+- [x] T7 install.sh / install.ps1 open nvim when done (DOTFILES_NO_LAUNCH=1 skips); nvim keeps the
+      update restart loop. (delegated writer)
+- Evidence: start screen shows 5 sessions; pressing 1 restored joajuproject with its 6 files;
+  24-row window hides the section and fits (21/22); install.ps1 in an interactive console opened
+  nvim after 15 s and ended cleanly after :qa; F1 63 items; universal keys still pass; install.sh syntax ok.

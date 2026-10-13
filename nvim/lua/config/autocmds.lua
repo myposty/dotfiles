@@ -403,3 +403,6 @@ require("config.scm")
 -- Update check for the dotfiles repo on start (lua/config/updates.lua)
 require("config.updates")
 require("config.markdown")
+
+-- Recent sessions: start screen list and :Sessions (lua/config/sessions.lua)
+require("config.sessions")

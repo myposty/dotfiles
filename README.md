@@ -19,6 +19,8 @@ The installer:
 2. Links the configs to this repo (existing ones are backed up as `*.bak-<date>`).
 3. Pre-installs every plugin, language server and treesitter parser, and fails loudly if any of them did not install.
 
+When it finishes it opens nvim (set `DOTFILES_NO_LAUNCH=1` to skip that).
+
 Running it again is safe. Tested on Windows 11 and a clean Debian 12.
 
 | What | Linked to |
@@ -82,6 +84,8 @@ Press `F1` (or `:Shortcuts`) inside nvim for the full list: type to filter, `Ent
 The **Any terminal** column works in every terminal. `Alt+P` is `Option+P` on a Mac.
 
 Everywhere: click a file path in Claude or a terminal to open it (a numbered diff line opens at that line); `Space` opens every LazyVim command; with the explorer open, the Git changes panel sits under the file tree (`s` stage, `c` commit, `p` push, `P` pull).
+
+**Sessions.** The start screen lists your recent sessions (`1` = the last one), `:Sessions` lists all of them. A session (folder, files, splits) is saved when you quit, and dotfiles updates restart nvim back to the same place.
 
 **Mac.** The Mac column works in WezTerm. macOS Terminal.app (and other terminals) keep every `Cmd` key and send `Ctrl+Shift+X` as plain `Ctrl+X`, so there use the **Any terminal** column. `Option` works as `Alt` because `install.sh` turns on "Use Option as Meta" in Terminal.app. The start screen and `F1` show the keys that work in the terminal you are using.
 

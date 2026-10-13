@@ -280,13 +280,34 @@ nvim --headless -c "luafile $repo/bootstrap.lua"
 echo
 in_wezterm=""
 if [ "${TERM_PROGRAM:-}" = "WezTerm" ] || [ -n "${WEZTERM_PANE:-}" ]; then in_wezterm=1; fi
+launch_msg="Done. Opening nvim (your recent sessions are on the start screen: press 1 for the last one)."
 if [ "$terminal" = "wezterm" ] && [ -z "$in_wezterm" ] && [ "$(uname)" = "Darwin" ] && [ -d "/Applications/WezTerm.app" ]; then
-  echo "Done. Opening WezTerm: run nvim there."
-  open -a WezTerm
+  if [ "${DOTFILES_NO_LAUNCH:-}" = "1" ]; then
+    echo "Done. Opening WezTerm: run nvim there."
+    open -a WezTerm
+    exit 0
+  fi
+  echo "$launch_msg"
+  wez=/Applications/WezTerm.app/Contents/MacOS/wezterm
+  if [ -x "$wez" ]; then
+    "$wez" start --cwd "$HOME" -- /bin/zsh -lic 'nvim; exec /bin/zsh -l' >/dev/null 2>&1 &
+  fi
+  open -a WezTerm # focus it (and the fallback when the binary is missing)
   exit 0
 fi
-echo "Done. nvim is ready."
-# Leave the user in a shell that already has the new PATH (nothing to reload by hand)
+# Leave the user in a shell that already has the new PATH (nothing to reload by hand).
+# nvim opens through an interactive login shell so the profile's `nvim` restart
+# function exists; quitting nvim drops into that shell.
 if [ -t 0 ] && [ -t 1 ]; then
-  if [ "$(uname)" = "Darwin" ]; then exec /bin/zsh -l; else exec "${SHELL:-/bin/bash}" -l; fi
+  if [ "${DOTFILES_NO_LAUNCH:-}" = "1" ]; then
+    echo "Done. nvim is ready."
+    if [ "$(uname)" = "Darwin" ]; then exec /bin/zsh -l; else exec "${SHELL:-/bin/bash}" -l; fi
+  fi
+  echo "$launch_msg"
+  if [ "$(uname)" = "Darwin" ]; then
+    exec /bin/zsh -lic 'nvim; exec /bin/zsh -l'
+  else
+    exec "${SHELL:-/bin/bash}" -lic 'nvim; exec "${SHELL:-/bin/bash}" -l'
+  fi
 fi
+echo "Done. nvim is ready."

@@ -31,6 +31,17 @@ local function start_screen_layout(self)
   if layout.logo then
     free = free + ROWS.name -- the big logo replaces the one-line name
   end
+  -- Recent sessions come before git: title + one row per session + padding, 1 to 5
+  -- sessions as space allows (skipped under 3 free rows)
+  layout.sessions = 0
+  if free >= 3 then
+    local list = require("config.sessions").list(5)
+    layout.session_items = list
+    layout.sessions = math.min(#list, 5, free - 2)
+    if layout.sessions > 0 then
+      free = free - (layout.sessions + 2)
+    end
+  end
   layout.git_rows = free
   return layout
 end
@@ -230,6 +241,34 @@ return {
           end,
           function(self)
             return vim.list_extend({ gap = 0, padding = 1 }, self._layout.keys)
+          end,
+          -- Recent sessions (lua/config/sessions.lua): 1 = the last one
+          function(self)
+            local count = self._layout.sessions or 0
+            if count < 1 then
+              return {}
+            end
+            local icon = require("config.shortcuts").nerd_font() and "\u{f017} " or "↺ "
+            local items = { { title = "Recent sessions  (1 = last, :Sessions = all)", padding = 1 } }
+            for i = 1, count do
+              local s = self._layout.session_items[i]
+              -- like the shortcut rows: name, then in the keys column the git branch
+              -- or, without one, the folder it lives in (its end, the part that tells)
+              local home = vim.fs.normalize(s.dir) == vim.fs.normalize(vim.uv.os_homedir())
+              local detail = s.branch and ("⎇ " .. s.branch)
+                or (home and "home folder" or vim.fn.fnamemodify(s.dir, ":~:h"))
+              if vim.fn.strchars(detail) > 22 then
+                detail = ".." .. vim.fn.strcharpart(detail, vim.fn.strchars(detail) - 20)
+              end
+              items[#items + 1] = {
+                icon = icon,
+                key = tostring(i),
+                desc = ("%-20s %s"):format(vim.fn.strcharpart(s.name, 0, 20), detail),
+                action = function() require("config.sessions").open(s) end,
+              }
+            end
+            items[#items].padding = 1
+            return items
           end,
           -- Git: branch and changed files, read fresh on every redraw (plain text,
           -- no embedded terminal). Only inside a repository.
