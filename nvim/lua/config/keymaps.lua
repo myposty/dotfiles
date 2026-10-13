@@ -166,11 +166,16 @@ map({ "n", "i", "v", "t" }, "<C-0>", focus_explorer, { desc = "Focus explorer" }
 
 -- Markdown: rendered preview / back to editing (see config/markdown.lua)
 map({ "n", "i", "v", "t" }, "<C-S-v>", function()
-  if not require("config.markdown").toggle() then
+  -- terminals: an image in the clipboard goes to Claude, text is pasted
+  if vim.api.nvim_get_mode().mode == "t" then
+    require("config.clipboard").paste_in_terminal()
+  elseif not require("config.markdown").toggle() then
     -- everywhere else Ctrl+Shift+V keeps pasting, as in the terminal
     vim.api.nvim_paste(vim.fn.getreg("+"), true, -1)
   end
 end, { desc = "Markdown preview / edit" })
+-- Ctrl+V in a terminal: macOS Terminal.app, WezTerm and Linux terminals send it as byte 22
+map("t", "<C-v>", function() require("config.clipboard").paste_in_terminal() end, { desc = "Paste (image into Claude)" })
 -- Ctrl+K V like VS Code, also with Ctrl still held for the V (Ctrl+K Ctrl+V)
 map({ "n", "i" }, "<C-k>v", function() require("config.markdown").toggle() end, { desc = "Markdown preview / edit" })
 map({ "n", "i" }, "<C-k><C-v>", function() require("config.markdown").toggle() end, { desc = "Markdown preview / edit" })
@@ -200,7 +205,8 @@ map(ANY, "<A-h>", function() replace(false) end, { desc = "Replace in project" }
 map(ANY, "<A-l>", function()
   vim.api.nvim_feedkeys(vim.keycode("<Plug>(VM-Select-All)"), "m", false)
 end, { desc = "Select all occurrences" })
-map(ANY_T, "<A-v>", function() require("config.markdown").toggle() end, { desc = "Markdown preview / edit" })
+-- not in terminal mode: Alt+V is Claude's own image key on Windows
+map(ANY, "<A-v>", function() require("config.markdown").toggle() end, { desc = "Markdown preview / edit" })
 for i = 1, 3 do
   map(ANY_T, ("<A-%d>"):format(i), function()
     local w = editors()[i]

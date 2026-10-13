@@ -42,6 +42,16 @@ if (-not (Get-Command tree-sitter -ErrorAction SilentlyContinue)) {
   npm install -g --silent tree-sitter-cli | Out-Null
   Refresh-Path
 }
+# ImageMagick: Snacks image converts image formats with `magick` (optional, only warns)
+if (-not (Get-Command magick -ErrorAction SilentlyContinue)) {
+  Write-Host "  installing ImageMagick"
+  try {
+    winget install -e --id ImageMagick.ImageMagick --accept-source-agreements --accept-package-agreements | Out-Null
+    Refresh-Path
+  } catch {
+    Write-Warning "could not install ImageMagick (image preview needs it): $_"
+  }
+}
 $missing = @($tools.Keys) + "tree-sitter" | Where-Object { -not (Test-Tool $_) }
 if ($missing) { throw "missing after install: $($missing -join ', '). Open a new terminal and run this again." }
 Write-Host "  all tools present"

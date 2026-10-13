@@ -118,7 +118,8 @@ function M.resume()
     pcall(os.remove, session)
   end
   vim.schedule(function()
-    if info.explorer then
+    -- the explorer already opens on start: never end up with two
+    if info.explorer and not require("config.sessions").explorer_open() then
       pcall(function() Snacks.explorer.open() end)
     end
     vim.notify("Dotfiles updated and nvim restarted:\n" .. bullets(info.changes or {}), vim.log.levels.INFO,

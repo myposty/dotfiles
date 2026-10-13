@@ -85,6 +85,10 @@ The **Any terminal** column works in every terminal. `Alt+P` is `Option+P` on a 
 
 Everywhere: click a file path in Claude or a terminal to open it (a numbered diff line opens at that line); `Space` opens every LazyVim command; with the explorer open, the Git changes panel sits under the file tree (`s` stage, `c` commit, `p` push, `P` pull).
 
+**Images.** Copy an image and paste it into Claude with `Ctrl+V` / `Ctrl+Shift+V` (on Windows `Alt+V` also works). Opening an image file previews it inline in WezTerm, kitty or ghostty; other terminals open it in the system viewer.
+
+**Explorer.** It opens on start like in VS Code (`NVIM_NO_EXPLORER=1` skips it).
+
 **Sessions.** The start screen lists your recent sessions (`1` = the last one), `:Sessions` lists all of them. A session (folder, files, splits) is saved when you quit, and dotfiles updates restart nvim back to the same place.
 
 **Mac.** The Mac column works in WezTerm. macOS Terminal.app (and other terminals) keep every `Cmd` key and send `Ctrl+Shift+X` as plain `Ctrl+X`, so there use the **Any terminal** column. `Option` works as `Alt` because `install.sh` turns on "Use Option as Meta" in Terminal.app. The start screen and `F1` show the keys that work in the terminal you are using.

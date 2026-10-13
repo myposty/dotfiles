@@ -212,6 +212,8 @@ return {
   {
     "folke/snacks.nvim",
     opts = {
+      -- Images where the terminal speaks the kitty graphics protocol (WezTerm, kitty, ghostty)
+      image = { enabled = true, doc = { enabled = true, inline = false, float = true } },
       -- Start screen: the user's name as logo (lua/config/logo.lua) and VS Code shortcuts (lua/config/shortcuts.lua)
       dashboard = {
         preset = {
@@ -263,7 +265,7 @@ return {
               items[#items + 1] = {
                 icon = icon,
                 key = tostring(i),
-                desc = ("%-20s %s"):format(vim.fn.strcharpart(s.name, 0, 20), detail),
+                desc = require("config.shortcuts").row(s.name, detail),
                 action = function() require("config.sessions").open(s) end,
               }
             end

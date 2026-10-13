@@ -33,6 +33,8 @@ M.list = {
   { keys = "Ctrl+Shift+L", alt = "Alt+L", desc = "Select all occurrences (multi-cursor)" },
   { keys = "Ctrl+Enter / Ctrl+Shift+Enter", desc = "New line below / above" },
   { keys = "Ctrl+Shift+V / Ctrl+K V", alt = "Alt+V / Ctrl+K V", desc = "Markdown: preview / edit (or click Preview at the top right)", run = function() vim.cmd("MarkdownPreview") end },
+  { keys = "Ctrl+V / Ctrl+Shift+V in Claude", desc = "Paste the copied image (or text) into Claude" },
+  { keys = "Open an image file", desc = "Preview it (WezTerm, kitty, ghostty) or open it in the system viewer" },
   { keys = "Click a file path in Claude", desc = "Open it in the editor (diff lines open at that line)" },
   { keys = "Alt+Z", desc = "Toggle word wrap", run = function() vim.wo.wrap = not vim.wo.wrap end },
   { keys = "F3 / Shift+F3", desc = "Next / previous search match" },
@@ -183,6 +185,30 @@ function M.open()
   })
 end
 
+-- A start screen row: "Name ······ Keys ······" with faint dot leaders, so the eye
+-- follows each name to its keys and to the letter at the end of the row
+local NAME_COL, ROW_WIDTH = 21, 44
+-- the comment color, without its italics (slanted dots look broken)
+local function leader_hl()
+  local comment = vim.api.nvim_get_hl(0, { name = "Comment", link = false })
+  vim.api.nvim_set_hl(0, "DashboardLeader", { fg = comment.fg, ctermfg = comment.ctermfg })
+end
+leader_hl()
+vim.api.nvim_create_autocmd("ColorScheme", { callback = leader_hl })
+function M.row(label, keys)
+  local w = vim.fn.strdisplaywidth
+  label = vim.fn.strcharpart(label, 0, NAME_COL - 2)
+  local lead1 = (" " .. ("·"):rep(math.max(1, NAME_COL - w(label) - 2)) .. " ")
+  local used = w(label) + w(lead1) + w(keys)
+  local lead2 = (" " .. ("·"):rep(math.max(1, ROW_WIDTH - used - 2)) .. " ")
+  return {
+    { label, hl = "desc" },
+    { lead1, hl = "DashboardLeader" },
+    { keys, hl = "desc" },
+    { lead2, hl = "DashboardLeader" },
+  }
+end
+
 -- Start screen entries: the shortcuts flagged with `home`, plus the list itself
 function M.dashboard_keys()
   local keys = {}
@@ -202,7 +228,7 @@ function M.dashboard_keys()
   end
   -- keys_text is already the label to show
   local function entry(key, label, keys_text, action)
-    return { icon = icons[key] .. " ", key = key, desc = ("%-20s %s"):format(label, keys_text), action = action }
+    return { icon = icons[key] .. " ", key = key, desc = M.row(label, keys_text), action = action }
   end
   for _, s in ipairs(M.list) do
     if s.home then

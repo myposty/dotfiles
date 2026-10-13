@@ -157,7 +157,7 @@ if [ "$(uname)" = "Darwin" ]; then
   fi
   have cc || xcode-select --install 2>/dev/null || true
   # tree-sitter-cli is the tree-sitter command; the "tree-sitter" formula is only the library
-  for pkg in neovim git ripgrep fd lazygit node tree-sitter-cli python; do
+  for pkg in neovim git ripgrep fd lazygit node tree-sitter-cli python imagemagick; do
     brew list "$pkg" >/dev/null 2>&1 || brew install "$pkg" || echo "  could not install $pkg"
   done
   # the icons font, for whichever terminal
@@ -193,7 +193,7 @@ elif have apt-get; then
   # stop the install waiting for an answer
   apt() { $sudo env DEBIAN_FRONTEND=noninteractive apt-get "$@"; }
   apt update -qq
-  apt install -y -qq git curl tar unzip gcc make ripgrep fd-find nodejs npm python3 python3-venv gpg xz-utils fontconfig >/dev/null
+  apt install -y -qq git curl tar unzip gcc make ripgrep fd-find nodejs npm python3 python3-venv gpg xz-utils fontconfig imagemagick >/dev/null
   # Debian/Ubuntu name the fd binary "fdfind"
   have fd || ln -sf "$(command -v fdfind)" "$local_bin/fd"
   if [ "$terminal" = "wezterm" ] && ! have wezterm; then
@@ -203,12 +203,12 @@ elif have apt-get; then
     apt update -qq && apt install -y -qq wezterm >/dev/null || echo "  could not install WezTerm"
   fi
 elif have dnf; then
-  $sudo dnf install -y -q git curl tar unzip gcc make ripgrep fd-find nodejs npm python3 xz fontconfig
+  $sudo dnf install -y -q git curl tar unzip gcc make ripgrep fd-find nodejs npm python3 xz fontconfig ImageMagick
   if [ "$terminal" = "wezterm" ] && ! have wezterm; then
     $sudo dnf copr enable -y wezfurlong/wezterm-nightly && $sudo dnf install -y -q wezterm || echo "  could not install WezTerm"
   fi
 elif have pacman; then
-  $sudo pacman -S --needed --noconfirm git curl tar unzip gcc make ripgrep fd nodejs npm python neovim lazygit xz fontconfig
+  $sudo pacman -S --needed --noconfirm git curl tar unzip gcc make ripgrep fd nodejs npm python neovim lazygit xz fontconfig imagemagick
   if [ "$terminal" = "wezterm" ]; then
     $sudo pacman -S --needed --noconfirm wezterm || echo "  could not install WezTerm"
   fi

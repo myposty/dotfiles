@@ -119,6 +119,16 @@ local function has_files()
   return false
 end
 
+-- True when a file explorer window already exists (opening it again would make two)
+function M.explorer_open()
+  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    if vim.bo[vim.api.nvim_win_get_buf(win)].filetype == "snacks_picker_list" then
+      return true
+    end
+  end
+  return false
+end
+
 -- Reopen a session the way VS Code reopens a workspace: the folder with its explorer
 -- and the files that still exist; with no files, the start screen of that folder.
 -- Never discards unsaved work.
@@ -147,7 +157,9 @@ function M.open(item)
     return
   end
   vim.schedule(function()
-    pcall(function() Snacks.explorer.open() end)
+    if not M.explorer_open() then
+      pcall(function() Snacks.explorer.open() end)
+    end
     -- no files: the start screen of that folder (the start screen autocmd may
     -- already have opened it)
     vim.defer_fn(function()
