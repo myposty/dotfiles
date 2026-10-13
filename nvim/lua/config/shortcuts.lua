@@ -67,13 +67,11 @@ M.list = {
   { keys = "F1", desc = "This list" },
 }
 
--- On a Mac inside WezTerm, Cmd does what Ctrl does elsewhere (wezterm.lua forwards it),
--- so the shortcuts are shown with Cmd. Other Mac terminals do not forward Cmd: Ctrl.
+-- On a Mac the shortcuts use Cmd instead of Ctrl, like VS Code for Mac (WezTerm,
+-- which install.sh sets up, forwards Cmd to nvim; see wezterm.lua).
 -- NVIM_FORCE_MAC=1 shows the Mac labels on another OS (to check them).
 local function cmd_keys()
-  local mac = vim.uv.os_uname().sysname == "Darwin" or vim.env.NVIM_FORCE_MAC == "1"
-  local wezterm = vim.env.TERM_PROGRAM == "WezTerm" or vim.env.WEZTERM_PANE ~= nil
-  return mac and wezterm
+  return vim.uv.os_uname().sysname == "Darwin" or vim.env.NVIM_FORCE_MAC == "1"
 end
 -- VS Code for Mac uses other keys for these
 local MAC_KEYS = {

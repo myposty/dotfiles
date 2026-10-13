@@ -115,17 +115,31 @@ if [ "$(uname)" = "Darwin" ]; then
   for pkg in neovim git ripgrep fd lazygit node tree-sitter-cli python; do
     brew list "$pkg" >/dev/null 2>&1 || brew install "$pkg" || echo "  could not install $pkg"
   done
-  brew list --cask wezterm >/dev/null 2>&1 || brew install --cask wezterm || true
-  brew list --cask font-caskaydia-cove-nerd-font >/dev/null 2>&1 || brew install --cask font-caskaydia-cove-nerd-font || true
+  # WezTerm is the terminal this setup is made for: it forwards Cmd to nvim
+  brew list --cask wezterm >/dev/null 2>&1 || brew install --cask wezterm
+  brew list --cask font-caskaydia-cove-nerd-font >/dev/null 2>&1 || brew install --cask font-caskaydia-cove-nerd-font
+  # zsh is the shell everywhere on the Mac (WezTerm starts it too)
+  if [ "$(basename "${SHELL:-}")" != "zsh" ]; then
+    chsh -s /bin/zsh || echo "  could not make zsh the default shell (run: chsh -s /bin/zsh)"
+  fi
 elif have apt-get; then
   $sudo apt-get update -qq
-  $sudo apt-get install -y -qq git curl tar unzip gcc make ripgrep fd-find nodejs npm python3 python3-venv >/dev/null
+  $sudo apt-get install -y -qq git curl tar unzip gcc make ripgrep fd-find nodejs npm python3 python3-venv gpg >/dev/null
   # Debian/Ubuntu name the fd binary "fdfind"
   have fd || ln -sf "$(command -v fdfind)" "$local_bin/fd"
+  if ! have wezterm; then
+    # official WezTerm apt repository
+    curl -fsSL https://apt.fury.io/wez/gpg.key | $sudo gpg --yes --dearmor -o /usr/share/keyrings/wezterm-fury.gpg
+    echo 'deb [signed-by=/usr/share/keyrings/wezterm-fury.gpg] https://apt.fury.io/wez/ * *' | $sudo tee /etc/apt/sources.list.d/wezterm.list >/dev/null
+    $sudo apt-get update -qq && $sudo apt-get install -y -qq wezterm >/dev/null || echo "  could not install WezTerm"
+  fi
 elif have dnf; then
   $sudo dnf install -y -q git curl tar unzip gcc make ripgrep fd-find nodejs npm python3
+  if ! have wezterm; then
+    $sudo dnf copr enable -y wezfurlong/wezterm-nightly && $sudo dnf install -y -q wezterm || echo "  could not install WezTerm"
+  fi
 elif have pacman; then
-  $sudo pacman -S --needed --noconfirm git curl tar unzip gcc make ripgrep fd nodejs npm python neovim lazygit
+  $sudo pacman -S --needed --noconfirm git curl tar unzip gcc make ripgrep fd nodejs npm python neovim lazygit wezterm
 else
   echo "  unknown package manager: install git, curl, gcc, ripgrep, fd, node, npm and python3, then run again"
   exit 1
@@ -169,8 +183,16 @@ echo "== Plugins, language servers and parsers (first run takes a few minutes)"
 nvim --headless -c "luafile $repo/bootstrap.lua"
 
 echo
+in_wezterm=""
+if [ "${TERM_PROGRAM:-}" = "WezTerm" ] || [ -n "${WEZTERM_PANE:-}" ]; then in_wezterm=1; fi
+if [ "$(uname)" = "Darwin" ] && [ -z "$in_wezterm" ] && [ -d "/Applications/WezTerm.app" ]; then
+  # Cmd shortcuts only reach nvim in WezTerm: continue there
+  echo "Done. Opening WezTerm: run nvim there (Cmd+P, Cmd+Shift+P... work in it)."
+  open -a WezTerm
+  exit 0
+fi
 echo "Done. nvim is ready."
 # Leave the user in a shell that already has the new PATH (nothing to reload by hand)
 if [ -t 0 ] && [ -t 1 ]; then
-  exec "${SHELL:-/bin/bash}" -l
+  if [ "$(uname)" = "Darwin" ]; then exec /bin/zsh -l; else exec "${SHELL:-/bin/bash}" -l; fi
 fi

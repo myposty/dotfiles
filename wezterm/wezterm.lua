@@ -69,6 +69,10 @@ user.windows_shell    = default(user.windows_shell, "C:/Program Files/Git/bin/ba
 if wezterm.target_triple:find("windows") and user.windows_shell then
   config.default_prog = { user.windows_shell, "-l" }
 end
+-- macOS: zsh as a login shell, so it reads ~/.zprofile and ~/.zshrc (PATH set by install.sh)
+if wezterm.target_triple:find("darwin") then
+  config.default_prog = { "/bin/zsh", "-l" }
+end
 
 -- --- Fuente -----------------------------------------------------------------
 -- WORKAROUND crash de WezTerm en Windows: al hacer fallback de glifos, WezTerm
