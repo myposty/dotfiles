@@ -35,25 +35,29 @@ local function start_screen_layout(self)
   return layout
 end
 
--- The terminal's light/dark answer can arrive after startup (and changes when the
--- system switches theme): re-apply the matching colorscheme then
+-- Always dark, whatever the terminal or the system theme. Neovim asks the terminal
+-- for its background and switches to "light" on a light one: switch it right back.
+vim.o.background = "dark"
 vim.api.nvim_create_autocmd("OptionSet", {
   pattern = "background",
   callback = function()
-    vim.schedule(function()
-      -- compare with the exact scheme: Tokyo Night switches itself to its dark style
-      local want = vim.o.background == "light" and "tokyonight-day" or "monokai_soda"
-      if vim.g.colors_name ~= want then
-        local scheme = LazyVim.config.colorscheme
-        if type(scheme) == "function" then
-          scheme()
-        else
-          vim.cmd.colorscheme(scheme)
+    if vim.o.background ~= "dark" then
+      vim.schedule(function()
+        vim.o.background = "dark"
+        if vim.g.colors_name ~= "monokai_soda" then
+          LazyVim.config.colorscheme()
         end
-      end
-    end)
+      end)
+    end
   end,
 })
+
+-- See-through background only in the terminals this setup makes dark: WezTerm (dark
+-- with blur) and Windows Terminal (Monokai Soda). In any other terminal, light ones
+-- included, the theme paints its own dark background.
+local function see_through()
+  return vim.env.TERM_PROGRAM == "WezTerm" or vim.env.WEZTERM_PANE ~= nil or vim.env.WT_SESSION ~= nil
+end
 
 return {
   -- Monokai Soda (same palette as the terminal) with a transparent background,
@@ -69,15 +73,12 @@ return {
   {
     "LazyVim/LazyVim",
     opts = {
-      -- Follows the terminal: Neovim reads its background and sets 'background'.
-      -- Dark: Monokai Soda, see-through. Light: Tokyo Night Day with its own solid
-      -- background, so text stays readable on any light terminal.
       colorscheme = function()
-        if vim.o.background == "light" then
-          vim.cmd.colorscheme("tokyonight-day")
+        vim.o.background = "dark"
+        vim.cmd.colorscheme("monokai_soda")
+        if not see_through() then
           return
         end
-        vim.cmd.colorscheme("monokai_soda")
         local clear = {
           "Normal", "NormalNC", "NormalFloat", "SignColumn", "LineNr", "CursorLineNr", "EndOfBuffer",
           "FoldColumn", "StatusLine", "StatusLineNC", "TabLine", "TabLineFill", "WinBar", "WinBarNC",
