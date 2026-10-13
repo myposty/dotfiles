@@ -52,6 +52,89 @@ vim.api.nvim_create_autocmd("OptionSet", {
   end,
 })
 
+-- macOS Terminal.app before 24-bit color support: Neovim would send colors it cannot
+-- show. There the theme runs on the 256-color palette, each color mapped to the
+-- nearest one, so it looks like Monokai Soda too.
+local function only_256_colors()
+  local truecolor = vim.env.COLORTERM == "truecolor" or vim.env.COLORTERM == "24bit"
+  return vim.env.NVIM_FORCE_256 == "1" or (vim.env.TERM_PROGRAM == "Apple_Terminal" and not truecolor)
+end
+
+-- Nearest xterm-256 color: the 6x6x6 cube or the 24-step gray ramp
+local function to_256(rgb)
+  local r, g, b = bit.rshift(rgb, 16), bit.band(bit.rshift(rgb, 8), 255), bit.band(rgb, 255)
+  local levels = { 0, 95, 135, 175, 215, 255 }
+  local function level(v)
+    local best = 1
+    for i, l in ipairs(levels) do
+      if math.abs(v - l) < math.abs(v - levels[best]) then
+        best = i
+      end
+    end
+    return best - 1
+  end
+  local ri, gi, bi = level(r), level(g), level(b)
+  local cube = { levels[ri + 1], levels[gi + 1], levels[bi + 1] }
+  local gray = math.max(0, math.min(23, math.floor(((r + g + b) / 3 - 8) / 10 + 0.5)))
+  local gv = 8 + gray * 10
+  local dist = function(x, y, z) return (r - x) ^ 2 + (g - y) ^ 2 + (b - z) ^ 2 end
+  if dist(gv, gv, gv) < dist(cube[1], cube[2], cube[3]) then
+    return 232 + gray
+  end
+  return 16 + 36 * ri + 6 * gi + bi
+end
+
+local function use_256_colors()
+  vim.o.termguicolors = false
+  for name, hl in pairs(vim.api.nvim_get_hl(0, {})) do
+    if not hl.link and (hl.fg or hl.bg or hl.sp) then
+      hl.ctermfg = hl.fg and to_256(hl.fg) or nil
+      hl.ctermbg = hl.bg and to_256(hl.bg) or nil
+      hl.cterm = { bold = hl.bold, italic = hl.italic, underline = hl.underline, undercurl = hl.undercurl,
+        reverse = hl.reverse, strikethrough = hl.strikethrough }
+      vim.api.nvim_set_hl(0, name, hl)
+    end
+  end
+end
+
+if only_256_colors() then
+  -- every color any plugin defines from now on gets its 256-color twin right away
+  -- (the tabs bar, for one, redefines its colors on every redraw)
+  local set_hl = vim.api.nvim_set_hl
+  local function as_number(c)
+    if type(c) == "number" then
+      return c
+    elseif type(c) == "string" and c:match("^#%x%x%x%x%x%x$") then
+      return tonumber(c:sub(2), 16)
+    end
+  end
+  ---@diagnostic disable-next-line: duplicate-set-field
+  vim.api.nvim_set_hl = function(ns, name, val)
+    if type(val) == "table" and not val.link then
+      local fg, bg = as_number(val.fg), as_number(val.bg)
+      if fg and val.ctermfg == nil then
+        val.ctermfg = to_256(fg)
+      end
+      if bg and val.ctermbg == nil then
+        val.ctermbg = to_256(bg)
+      end
+    end
+    return set_hl(ns, name, val)
+  end
+  -- plugins that load later bring their own colors: convert again after each one
+  vim.api.nvim_create_autocmd({ "ColorScheme", "VimEnter" }, {
+    callback = function() vim.schedule(use_256_colors) end,
+  })
+  vim.api.nvim_create_autocmd("User", {
+    pattern = { "LazyLoad", "VeryLazy" },
+    callback = function()
+      vim.schedule(use_256_colors)
+      -- some (the tabs bar) set their colors a moment after loading
+      vim.defer_fn(use_256_colors, 500)
+    end,
+  })
+end
+
 -- See-through background only in the terminals this setup makes dark: WezTerm (dark
 -- with blur) and Windows Terminal (Monokai Soda). In any other terminal, light ones
 -- included, the theme paints its own dark background.

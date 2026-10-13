@@ -118,6 +118,24 @@ if [ "$(uname)" = "Darwin" ]; then
   # WezTerm is the terminal this setup is made for: it forwards Cmd to nvim
   brew list --cask wezterm >/dev/null 2>&1 || brew install --cask wezterm
   brew list --cask font-caskaydia-cove-nerd-font >/dev/null 2>&1 || brew install --cask font-caskaydia-cove-nerd-font
+  # macOS Terminal.app looks like WezTerm too: Nerd Font (icons), dark Monokai Soda
+  # colors, and Option as Meta (Option+Z, Option+arrows). Changes its default profile.
+  osascript <<'OSA' >/dev/null 2>&1 || echo "  could not set up Terminal.app (System Settings > Privacy > Automation)"
+tell application "Terminal"
+  set s to default settings
+  set font name of s to "CaskaydiaCoveNFM-Regular"
+  set font size of s to 14
+  set background color of s to {6682, 6682, 6682}
+  set normal text color of s to {63222, 63222, 60652}
+  set bold text color of s to {65535, 65535, 65535}
+  set cursor color of s to {40092, 25700, 65278}
+end tell
+OSA
+  term_profile="$(defaults read com.apple.Terminal "Default Window Settings" 2>/dev/null || echo Basic)"
+  /usr/libexec/PlistBuddy -c "Set ':Window Settings:$term_profile:useOptionAsMetaKey' true" \
+    "$HOME/Library/Preferences/com.apple.Terminal.plist" 2>/dev/null \
+    || /usr/libexec/PlistBuddy -c "Add ':Window Settings:$term_profile:useOptionAsMetaKey' bool true" \
+      "$HOME/Library/Preferences/com.apple.Terminal.plist" 2>/dev/null || true
   # zsh is the shell everywhere on the Mac (WezTerm starts it too)
   if [ "$(basename "${SHELL:-}")" != "zsh" ]; then
     chsh -s /bin/zsh || echo "  could not make zsh the default shell (run: chsh -s /bin/zsh)"
@@ -185,11 +203,9 @@ nvim --headless -c "luafile $repo/bootstrap.lua"
 echo
 in_wezterm=""
 if [ "${TERM_PROGRAM:-}" = "WezTerm" ] || [ -n "${WEZTERM_PANE:-}" ]; then in_wezterm=1; fi
-if [ "$(uname)" = "Darwin" ] && [ -z "$in_wezterm" ] && [ -d "/Applications/WezTerm.app" ]; then
-  # Cmd shortcuts only reach nvim in WezTerm: continue there
-  echo "Done. Opening WezTerm: run nvim there (Cmd+P, Cmd+Shift+P... work in it)."
-  open -a WezTerm
-  exit 0
+if [ "$(uname)" = "Darwin" ] && [ -z "$in_wezterm" ]; then
+  echo "Terminal.app is set up too. Cmd shortcuts (Cmd+P, Cmd+Shift+P...) only reach nvim in WezTerm;"
+  echo "in Terminal.app use the Ctrl ones that macOS lets through (Ctrl+P, Ctrl+B, Ctrl+S...)."
 fi
 echo "Done. nvim is ready."
 # Leave the user in a shell that already has the new PATH (nothing to reload by hand)
