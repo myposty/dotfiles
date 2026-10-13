@@ -111,6 +111,52 @@ if (-not $wt) {
   Write-Host "  $($keys.keybindings.Count) nvim key bindings in place (backup: $wt.bak-$stamp)"
 }
 
+Write-Host "== Shell profiles (nvim restarts itself after a dotfiles update)"
+# nvim quits leaving a marker after an update; these `nvim` functions open it again
+# where it was. The marker is renamed before reopening, so it can never loop.
+$psBlock = @'
+# >>> dotfiles >>>
+function nvim {
+  $marker = Join-Path $env:LOCALAPPDATA "nvim-data\dotfiles-restart.json"
+  $env:NVIM_RESTART_WRAPPER = "1"
+  & nvim.exe @args
+  while (Test-Path $marker) {
+    Move-Item -Force $marker "$marker.resume"
+    & nvim.exe -c "lua require('config.updates').resume()"
+  }
+  Remove-Item Env:\NVIM_RESTART_WRAPPER -ErrorAction SilentlyContinue
+}
+# <<< dotfiles <<<
+'@
+$bashBlock = @'
+# >>> dotfiles >>>
+nvim() {
+  local marker="$LOCALAPPDATA/nvim-data/dotfiles-restart.json"
+  NVIM_RESTART_WRAPPER=1 command nvim "$@"
+  local code=$?
+  while [ -f "$marker" ]; do
+    mv -f "$marker" "$marker.resume"
+    NVIM_RESTART_WRAPPER=1 command nvim -c "lua require('config.updates').resume()"
+    code=$?
+  done
+  return $code
+}
+# <<< dotfiles <<<
+'@
+function Set-Block($file, $block) {
+  New-Item -ItemType Directory -Force (Split-Path $file) | Out-Null
+  $text = if (Test-Path $file) { [IO.File]::ReadAllText($file) } else { "" }
+  # replace an earlier block instead of adding a second one
+  $text = [regex]::Replace($text, "(?s)# >>> dotfiles >>>.*?# <<< dotfiles <<<\r?\n?", "")
+  $text = $text.TrimEnd() + $(if ($text.Trim()) { "`n`n" } else { "" }) + ($block -replace "`r`n", "`n") + "`n"
+  [IO.File]::WriteAllText($file, $text, (New-Object Text.UTF8Encoding $false))
+  Write-Host "  updated $file"
+}
+$docs = [Environment]::GetFolderPath("MyDocuments")
+Set-Block (Join-Path $docs "WindowsPowerShell\Microsoft.PowerShell_profile.ps1") $psBlock
+Set-Block (Join-Path $docs "PowerShell\Microsoft.PowerShell_profile.ps1") $psBlock
+Set-Block (Join-Path $env:USERPROFILE ".bashrc") $bashBlock
+
 Write-Host "== Plugins, language servers and parsers (first run takes a few minutes)"
 nvim --headless -c "luafile $($repo -replace '\\', '/')/bootstrap.lua"
 if ($LASTEXITCODE -ne 0) { throw "nvim bootstrap failed (see FAILED line above)" }

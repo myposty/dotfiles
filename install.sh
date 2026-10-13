@@ -110,6 +110,19 @@ export PATH="$HOME/.local/bin:$HOME/.local/nvim/bin:$PATH"
 export EDITOR=nvim VISUAL=nvim
 # dots: update everything (dotfiles, tools, plugins) without typing the installer path
 alias dots='bash "$HOME/dotfiles/install.sh"'
+# nvim restarts itself after a dotfiles update: it quits leaving a marker, and this
+# opens it again where it was (renaming the marker first, so it can never loop)
+nvim() {
+  local marker="${XDG_STATE_HOME:-$HOME/.local/state}/nvim/dotfiles-restart.json"
+  NVIM_RESTART_WRAPPER=1 command nvim "$@"
+  local code=$?
+  while [ -f "$marker" ]; do
+    mv -f "$marker" "$marker.resume"
+    NVIM_RESTART_WRAPPER=1 command nvim -c "lua require('config.updates').resume()"
+    code=$?
+  done
+  return $code
+}
 # <<< dotfiles <<<
 EOF
 }
