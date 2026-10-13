@@ -1,0 +1,85 @@
+name: test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: rhysd/action-setup-vim@v1
+        with:
+          neovim: true
+          version: stable
+      - name: install.sh syntax
+        run: bash -n install.sh
+      - name: install.ps1 syntax
+        shell: pwsh
+        run: |
+          $errors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile("$PWD/install.ps1", [ref]$null, [ref]$errors)
+          if ($errors) { $errors | ForEach-Object { Write-Error $_.ToString() }; exit 1 }
+      - name: Lua files compile
+        run: |
+          nvim --clean --headless -c "lua local bad = 0; local files = vim.fn.glob('nvim/**/*.lua', false, true); vim.list_extend(files, { 'bootstrap.lua', 'tests/run.lua' }); for _, f in ipairs(files) do local ok, err = loadfile(f); if not ok then bad = bad + 1; print('FAIL ' .. err) end end; print(#files .. ' files, ' .. bad .. ' broken'); vim.cmd(bad == 0 and 'qall!' or 'cquit 1')"
+
+  test:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install (macOS / Linux)
+        if: runner.os != 'Windows'
+        env:
+          DOTFILES_TERMINAL: system
+          DOTFILES_NO_LAUNCH: "1"
+          # the checkout is already the version under test: no self-update
+          DOTFILES_PULLED: "1"
+          GITHUB_TOKEN: ${{ github.token }}
+        run: bash install.sh
+
+      - name: Install tools (Windows runners have no winget)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          choco install -y --no-progress neovim git ripgrep fd lazygit nodejs-lts python mingw wezterm
+          if ($LASTEXITCODE -notin 0, 1641, 3010) { exit $LASTEXITCODE }
+          exit 0
+
+      - name: Install (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
+        env:
+          DOTFILES_NO_LAUNCH: "1"
+        run: |
+          $env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [Environment]::GetEnvironmentVariable("Path", "User")
+          powershell -ExecutionPolicy Bypass -File install.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Test (macOS / Linux)
+        if: runner.os != 'Windows'
+        run: |
+          for brew_bin in /opt/homebrew/bin/brew /usr/local/bin/brew /home/linuxbrew/.linuxbrew/bin/brew; do
+            if [ -x "$brew_bin" ]; then eval "$("$brew_bin" shellenv)"; break; fi
+          done
+          export PATH="$HOME/.local/bin:$HOME/.local/nvim/bin:$PATH"
+          nvim --version | head -n 1
+          nvim --headless -c "luafile tests/run.lua"
+
+      - name: Test (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [Environment]::GetEnvironmentVariable("Path", "User")
+          $env:Path += ";" + (npm prefix -g)
+          nvim --version | Select-Object -First 1
+          nvim --headless -c "luafile tests/run.lua"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

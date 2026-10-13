@@ -161,13 +161,16 @@ if [ "$(uname)" = "Darwin" ]; then
     brew list "$pkg" >/dev/null 2>&1 || brew install "$pkg" || echo "  could not install $pkg"
   done
   # the icons font, for whichever terminal
-  brew list --cask font-caskaydia-cove-nerd-font >/dev/null 2>&1 || brew install --cask font-caskaydia-cove-nerd-font
+  brew list --cask font-caskaydia-cove-nerd-font >/dev/null 2>&1 || brew install --cask font-caskaydia-cove-nerd-font \
+    || echo "  could not install the Nerd Font (icons may show as boxes)"
   if [ "$terminal" = "wezterm" ]; then
-    brew list --cask wezterm >/dev/null 2>&1 || brew install --cask wezterm
+    brew list --cask wezterm >/dev/null 2>&1 || brew install --cask wezterm || echo "  could not install WezTerm"
   fi
   # Terminal.app, whatever the terminal choice (it is always there, and the icons and
   # Alt keys must work in it): Nerd Font (icons), dark Monokai Soda colors and Option
   # as Meta (Option+Z, Option+P...). Changes its default profile.
+  # (CI runners have no Terminal.app to script: skipped there)
+  if [ -z "${CI:-}" ]; then
   osascript <<'OSA' >/dev/null 2>&1 || echo "  could not set up Terminal.app (System Settings > Privacy > Automation)"
 tell application "Terminal"
   set s to default settings
@@ -179,13 +182,15 @@ tell application "Terminal"
   set cursor color of s to {40092, 25700, 65278}
 end tell
 OSA
+  fi
   term_profile="$(defaults read com.apple.Terminal "Default Window Settings" 2>/dev/null || echo Basic)"
   /usr/libexec/PlistBuddy -c "Set ':Window Settings:$term_profile:useOptionAsMetaKey' true" \
     "$HOME/Library/Preferences/com.apple.Terminal.plist" 2>/dev/null \
     || /usr/libexec/PlistBuddy -c "Add ':Window Settings:$term_profile:useOptionAsMetaKey' bool true" \
       "$HOME/Library/Preferences/com.apple.Terminal.plist" 2>/dev/null || true
   # zsh is the shell everywhere on the Mac (WezTerm starts it too)
-  if [ "$(basename "${SHELL:-}")" != "zsh" ]; then
+  # (chsh asks for the password: only in a terminal, never in CI)
+  if [ -t 0 ] && [ "$(basename "${SHELL:-}")" != "zsh" ]; then
     chsh -s /bin/zsh || echo "  could not make zsh the default shell (run: chsh -s /bin/zsh)"
   fi
 elif have apt-get; then
@@ -228,7 +233,7 @@ if [ "$(uname)" != "Darwin" ]; then
   fi
   if ! have lazygit; then
     echo "  installing lazygit"
-    version="$(curl -fsSL https://api.github.com/repos/jesseduffield/lazygit/releases/latest | grep -o '"tag_name": *"v[^"]*"' | grep -o '[0-9][0-9.]*')"
+    version="$(curl -fsSL ${GITHUB_TOKEN:+-H "Authorization: Bearer $GITHUB_TOKEN"} https://api.github.com/repos/jesseduffield/lazygit/releases/latest | grep -o '"tag_name": *"v[^"]*"' | grep -o '[0-9][0-9.]*')"
     curl -fsSL "https://github.com/jesseduffield/lazygit/releases/download/v${version}/lazygit_${version}_Linux_${arch_lg}.tar.gz" | tar -xz -C "$local_bin" lazygit
   fi
 
@@ -259,7 +264,7 @@ if [ "$(uname)" != "Darwin" ]; then
   fi
 fi
 # Claude Code (the panel on Ctrl+Shift+A / Alt+C runs it): Anthropic's official installer
-if ! have claude; then
+if ! have claude && [ -z "${CI:-}" ]; then
   echo "  installing Claude Code"
   curl -fsSL https://claude.ai/install.sh | bash >/dev/null 2>&1 || echo "  could not install Claude Code (https://claude.com/claude-code)"
 fi

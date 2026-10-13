@@ -41,6 +41,9 @@ if (-not (Get-Command tree-sitter -ErrorAction SilentlyContinue)) {
   Write-Host "  installing tree-sitter CLI"
   npm install -g --silent tree-sitter-cli | Out-Null
   Refresh-Path
+  # npm's global bin folder is not always on the registry PATH yet (fresh Node install)
+  $npmBin = (npm prefix -g)
+  if ($npmBin -and ($env:Path -split ";") -notcontains $npmBin) { $env:Path += ";$npmBin" }
 }
 # ImageMagick: Snacks image converts image formats with `magick` (optional, only warns)
 if (-not (Get-Command magick -ErrorAction SilentlyContinue)) {
@@ -125,6 +128,8 @@ Write-Host "== Claude Code"
 # the panel on Ctrl+Shift+A / Alt+C runs it: Anthropic's official installer when missing
 if (Get-Command claude -ErrorAction SilentlyContinue) {
   Write-Host "  already installed"
+} elseif ($env:CI) {
+  Write-Host "  skipped in CI"
 } else {
   try {
     Invoke-RestMethod https://claude.ai/install.ps1 | Invoke-Expression

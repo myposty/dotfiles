@@ -108,6 +108,16 @@ Files open ready to type: letters write text. `Esc` switches to Vim's command mo
 | Shortcut list and start screen entries | `nvim/lua/config/shortcuts.lua` |
 | Key bindings | `nvim/lua/config/keymaps.lua` |
 
+## Tests
+
+With the config installed (run the installer first), from the repo root:
+
+```
+nvim --headless -c "luafile tests/run.lua"
+```
+
+It prints `ok` / `FAIL` per test and exits non-zero on any failure. It checks the pure helpers (links, sessions, shortcut labels), the start screen layout, markdown preview, image files, runs every action of the shortcut list and every key mapping of `keymaps.lua` (pickers, windows and terminals are checked, not launched), and feeds each VS Code key and its Alt twin. GitHub Actions (`.github/workflows/test.yml`) lints the scripts, then runs the installer and this suite on Ubuntu, macOS and Windows for every push and pull request.
+
 ## Why the terminal config matters
 
 Terminals send `Ctrl+Shift+O` as `Ctrl+O`, so Neovim cannot tell them apart. WezTerm and Windows Terminal are set to send those keys as CSI-u sequences when needed. In WezTerm this only happens while `nvim` is the active program; elsewhere the keys keep their WezTerm behavior.

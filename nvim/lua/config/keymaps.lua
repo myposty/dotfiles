@@ -64,7 +64,12 @@ map({ "n", "i" }, "<C-/>", function() vim.cmd("normal gcc") end, { desc = "Toggl
 map({ "n", "i" }, "<C-_>", function() vim.cmd("normal gcc") end, { desc = "Toggle comment" })
 map("v", "<C-/>", "gc", { remap = true, desc = "Toggle comment" })
 map("v", "<C-_>", "gc", { remap = true, desc = "Toggle comment" })
-map({ "n", "i" }, "<A-Up>", function() vim.cmd("m .-2") vim.cmd("normal! ==") end, { desc = "Move line up" })
+map({ "n", "i" }, "<A-Up>", function()
+  if vim.fn.line(".") > 1 then -- on the first line ":m .-2" is an invalid range
+    vim.cmd("m .-2")
+    vim.cmd("normal! ==")
+  end
+end, { desc = "Move line up" })
 map({ "n", "i" }, "<A-Down>", function() vim.cmd("m .+1") vim.cmd("normal! ==") end, { desc = "Move line down" })
 map("v", "<A-Up>", ":m '<-2<cr>gv=gv", { desc = "Move selection up", silent = true })
 map("v", "<A-Down>", ":m '>+1<cr>gv=gv", { desc = "Move selection down", silent = true })
