@@ -164,9 +164,10 @@ if [ "$(uname)" = "Darwin" ]; then
   brew list --cask font-caskaydia-cove-nerd-font >/dev/null 2>&1 || brew install --cask font-caskaydia-cove-nerd-font
   if [ "$terminal" = "wezterm" ]; then
     brew list --cask wezterm >/dev/null 2>&1 || brew install --cask wezterm
-  else
-  # Terminal.app: Nerd Font (icons), dark Monokai Soda colors and Option as Meta
-  # (Option+Z, Option+arrows). Changes its default profile.
+  fi
+  # Terminal.app, whatever the terminal choice (it is always there, and the icons and
+  # Alt keys must work in it): Nerd Font (icons), dark Monokai Soda colors and Option
+  # as Meta (Option+Z, Option+P...). Changes its default profile.
   osascript <<'OSA' >/dev/null 2>&1 || echo "  could not set up Terminal.app (System Settings > Privacy > Automation)"
 tell application "Terminal"
   set s to default settings
@@ -183,14 +184,13 @@ OSA
     "$HOME/Library/Preferences/com.apple.Terminal.plist" 2>/dev/null \
     || /usr/libexec/PlistBuddy -c "Add ':Window Settings:$term_profile:useOptionAsMetaKey' bool true" \
       "$HOME/Library/Preferences/com.apple.Terminal.plist" 2>/dev/null || true
-  fi
   # zsh is the shell everywhere on the Mac (WezTerm starts it too)
   if [ "$(basename "${SHELL:-}")" != "zsh" ]; then
     chsh -s /bin/zsh || echo "  could not make zsh the default shell (run: chsh -s /bin/zsh)"
   fi
 elif have apt-get; then
   $sudo apt-get update -qq
-  $sudo apt-get install -y -qq git curl tar unzip gcc make ripgrep fd-find nodejs npm python3 python3-venv gpg >/dev/null
+  $sudo apt-get install -y -qq git curl tar unzip gcc make ripgrep fd-find nodejs npm python3 python3-venv gpg xz-utils fontconfig >/dev/null
   # Debian/Ubuntu name the fd binary "fdfind"
   have fd || ln -sf "$(command -v fdfind)" "$local_bin/fd"
   if [ "$terminal" = "wezterm" ] && ! have wezterm; then
@@ -200,12 +200,12 @@ elif have apt-get; then
     $sudo apt-get update -qq && $sudo apt-get install -y -qq wezterm >/dev/null || echo "  could not install WezTerm"
   fi
 elif have dnf; then
-  $sudo dnf install -y -q git curl tar unzip gcc make ripgrep fd-find nodejs npm python3
+  $sudo dnf install -y -q git curl tar unzip gcc make ripgrep fd-find nodejs npm python3 xz fontconfig
   if [ "$terminal" = "wezterm" ] && ! have wezterm; then
     $sudo dnf copr enable -y wezfurlong/wezterm-nightly && $sudo dnf install -y -q wezterm || echo "  could not install WezTerm"
   fi
 elif have pacman; then
-  $sudo pacman -S --needed --noconfirm git curl tar unzip gcc make ripgrep fd nodejs npm python neovim lazygit
+  $sudo pacman -S --needed --noconfirm git curl tar unzip gcc make ripgrep fd nodejs npm python neovim lazygit xz fontconfig
   if [ "$terminal" = "wezterm" ]; then
     $sudo pacman -S --needed --noconfirm wezterm || echo "  could not install WezTerm"
   fi
@@ -227,6 +227,32 @@ if [ "$(uname)" != "Darwin" ]; then
     echo "  installing lazygit"
     version="$(curl -fsSL https://api.github.com/repos/jesseduffield/lazygit/releases/latest | grep -o '"tag_name": *"v[^"]*"' | grep -o '[0-9][0-9.]*')"
     curl -fsSL "https://github.com/jesseduffield/lazygit/releases/download/v${version}/lazygit_${version}_Linux_${arch_lg}.tar.gz" | tar -xz -C "$local_bin" lazygit
+  fi
+
+  # Icons font: Caskaydia Cove Nerd Font for the terminal (failures only warn)
+  font_dir="$HOME/.local/share/fonts"
+  mkdir -p "$font_dir"
+  if ! ls "$font_dir"/CaskaydiaCove*NerdFont* >/dev/null 2>&1; then
+    echo "  installing Caskaydia Cove Nerd Font"
+    font_tmp="$(mktemp -d)"
+    if curl -fsSL -o "$font_tmp/font.tar.xz" "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/CascadiaCode.tar.xz" \
+      && tar -xJf "$font_tmp/font.tar.xz" -C "$font_dir" --wildcards \
+        'CaskaydiaCoveNerdFont-Regular.ttf' 'CaskaydiaCoveNerdFont-Bold.ttf' \
+        'CaskaydiaCoveNerdFontMono-Regular.ttf' 'CaskaydiaCoveNerdFontMono-Bold.ttf'; then
+      if have fc-cache; then fc-cache -f "$font_dir" >/dev/null 2>&1 || true; fi
+    else
+      echo "  could not install the Nerd Font (icons may show as boxes): https://www.nerdfonts.com/font-downloads"
+    fi
+    rm -rf "$font_tmp"
+  fi
+  # GNOME Terminal: use it in the default profile (best effort)
+  if have gsettings; then
+    gt_id="$(gsettings get org.gnome.Terminal.ProfilesList default 2>/dev/null | tr -d "'" || true)"
+    if [ -n "$gt_id" ] && ls "$font_dir"/CaskaydiaCove*NerdFont* >/dev/null 2>&1; then
+      gt_path="org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:$gt_id/"
+      gsettings set "$gt_path" use-system-font false 2>/dev/null \
+        && gsettings set "$gt_path" font "CaskaydiaCove Nerd Font Mono 12" 2>/dev/null || true
+    fi
   fi
 fi
 # Last resort for the tree-sitter command on any OS: the npm package

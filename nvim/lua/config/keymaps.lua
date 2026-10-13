@@ -53,18 +53,10 @@ map(ANY, "<C-PageUp>", "<cmd>bprevious<cr>", { desc = "Previous tab" })
 map({ "n", "i", "v", "s" }, "<C-s>", "<cmd>w<cr>", { desc = "Save" })
 map({ "n", "i" }, "<C-z>", "<cmd>undo<cr>", { desc = "Undo" })
 map({ "n", "i" }, "<C-S-z>", "<cmd>redo<cr>", { desc = "Redo" })
--- macOS Terminal (and other Mac terminals but WezTerm) send Ctrl+Shift+A as Ctrl+A,
--- and select all there is Cmd+A, which the terminal keeps: Ctrl+A opens Claude
-local mac_plain_terminal = (vim.uv.os_uname().sysname == "Darwin" or vim.env.NVIM_FORCE_MAC == "1")
-  and vim.env.TERM_PROGRAM ~= "WezTerm" and vim.env.WEZTERM_PANE == nil
-if mac_plain_terminal then
-  map({ "n", "i", "v" }, "<C-a>", function()
-    require("lazy").load({ plugins = { "claudecode.nvim" } })
-    vim.cmd("ClaudeCodeFocus")
-  end, { desc = "Claude Code" })
-else
-  map({ "n", "i" }, "<C-a>", "<esc>ggVG", { desc = "Select all" })
-end
+-- Ctrl+Y redoes like VS Code on Windows (plain Ctrl key: reaches nvim in every terminal)
+map({ "n", "i" }, "<C-y>", "<cmd>redo<cr>", { desc = "Redo" })
+-- Select all is Ctrl+A everywhere; Claude has its own universal key (Alt+C)
+map({ "n", "i" }, "<C-a>", "<esc>ggVG", { desc = "Select all" })
 map("v", "<C-c>", '"+y', { desc = "Copy" })
 map("v", "<C-x>", '"+d', { desc = "Cut" })
 map("i", "<C-v>", "<C-r>+", { desc = "Paste" })
@@ -162,14 +154,15 @@ for i = 1, 3 do
     end
   end, { desc = ("Focus editor %d"):format(i) })
 end
-map({ "n", "i", "v", "t" }, "<C-0>", function()
+local function focus_explorer()
   local explorer = Snacks.picker.get({ source = "explorer" })[1]
   if explorer then
     explorer:focus()
   else
     Snacks.explorer.open()
   end
-end, { desc = "Focus explorer" })
+end
+map({ "n", "i", "v", "t" }, "<C-0>", focus_explorer, { desc = "Focus explorer" })
 
 -- Markdown: rendered preview / back to editing (see config/markdown.lua)
 map({ "n", "i", "v", "t" }, "<C-S-v>", function()
@@ -185,3 +178,41 @@ map({ "n", "i" }, "<C-k><C-v>", function() require("config.markdown").toggle() e
 map(ANY, "<A-z>", function() vim.wo.wrap = not vim.wo.wrap end, { desc = "Toggle word wrap" })
 map({ "n", "i" }, "<F3>", "<cmd>normal! n<cr>", { desc = "Next match" })
 map({ "n", "i" }, "<S-F3>", "<cmd>normal! N<cr>", { desc = "Previous match" })
+
+-- Universal keys: Alt (Option on a Mac, "Use Option as Meta") reaches nvim in every
+-- terminal, unlike Ctrl+Shift / Cmd / Ctrl+digit, which most terminals swallow or
+-- send as another key. Same actions as the VS Code keys above.
+local ANY_T = { "n", "i", "v", "t" }
+map(ANY, "<A-p>", function() Snacks.picker.commands() end, { desc = "Command palette" })
+map(ANY, "<A-f>", function() LazyVim.pick("live_grep")() end, { desc = "Search in files" })
+map(ANY, "<A-o>", function() Snacks.picker.projects() end, { desc = "Open folder" })
+-- replaces LazyVim's Alt+K "move line up" (Alt+Up / Alt+Down still move lines)
+map(ANY, "<A-k>", function() require("config.folders").open() end, { desc = "Browse folders" })
+map(ANY, "<A-r>", function() Snacks.picker.recent() end, { desc = "Open recent file" })
+map(ANY_T, "<A-c>", function()
+  require("lazy").load({ plugins = { "claudecode.nvim" } })
+  vim.cmd("ClaudeCodeFocus")
+end, { desc = "Claude Code" })
+map(ANY, "<A-g>", function() Snacks.lazygit() end, { desc = "Git (lazygit)" })
+map(ANY_T, "<A-e>", function() Snacks.explorer() end, { desc = "Toggle explorer" })
+map(ANY, "<A-m>", function() Snacks.picker.diagnostics() end, { desc = "Problems panel" })
+map(ANY, "<A-h>", function() replace(false) end, { desc = "Replace in project" })
+map(ANY, "<A-l>", function()
+  vim.api.nvim_feedkeys(vim.keycode("<Plug>(VM-Select-All)"), "m", false)
+end, { desc = "Select all occurrences" })
+map(ANY_T, "<A-v>", function() require("config.markdown").toggle() end, { desc = "Markdown preview / edit" })
+for i = 1, 3 do
+  map(ANY_T, ("<A-%d>"):format(i), function()
+    local w = editors()[i]
+    if w then
+      vim.api.nvim_set_current_win(w)
+    end
+  end, { desc = ("Focus editor %d"):format(i) })
+end
+map(ANY_T, "<A-0>", focus_explorer, { desc = "Focus explorer" })
+map(ANY, "<A-,>", function() require("config.shortcuts").settings() end, { desc = "Settings" })
+map(ANY, "<A-.>", vim.lsp.buf.code_action, { desc = "Quick fix" })
+map(ANY_T, "<A-`>", function() Snacks.terminal.open() end, { desc = "New terminal" })
+-- Terminal.app keeps Ctrl+Tab, so tabs get Alt keys too
+map(ANY, "<A-]>", "<cmd>bnext<cr>", { desc = "Next tab" })
+map(ANY, "<A-[>", "<cmd>bprevious<cr>", { desc = "Previous tab" })

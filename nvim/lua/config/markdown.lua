@@ -25,7 +25,13 @@ end
 -- The button shown at the top right of markdown files
 local function winbar(win)
   local buf = vim.api.nvim_win_get_buf(win)
-  local label = vim.b[buf].md_preview and " 󰷈 Edit " or " 󰈈 Preview "
+  local nerd = require("config.shortcuts").nerd_font()
+  local label
+  if vim.b[buf].md_preview then
+    label = nerd and " 󰷈 Edit " or " Edit "
+  else
+    label = nerd and " 󰈈 Preview " or " Preview "
+  end
   vim.wo[win].winbar = "%=%#SnacksPickerSpecial#%@v:lua.MarkdownPreviewClick@" .. label .. "%X%*"
 end
 

@@ -35,6 +35,11 @@ local function start_screen_layout(self)
   return layout
 end
 
+-- Plugins that draw icons read this: false when the terminal font has no Nerd glyphs
+if not require("config.shortcuts").nerd_font() then
+  vim.g.have_nerd_font = false
+end
+
 -- Always dark, whatever the terminal or the system theme. Neovim asks the terminal
 -- for its background and switches to "light" on a light one: switch it right back.
 vim.o.background = "dark"
@@ -328,6 +333,10 @@ return {
       vim.api.nvim_create_autocmd("ColorScheme", {
         callback = function() vim.api.nvim_set_hl(0, "FolderIcon", { fg = "#4AA8F5", default = true }) end,
       })
+      -- no Nerd Font in the terminal: plain ASCII icons instead of "?" boxes
+      if not require("config.shortcuts").nerd_font() then
+        opts.style = "ascii"
+      end
       local icons = require("mini.icons")
       icons.setup(opts)
       opts.default = vim.tbl_deep_extend("force", opts.default or {}, { directory = { hl = "FolderIcon" } })
@@ -347,6 +356,23 @@ return {
     dependencies = { "nvim-treesitter/nvim-treesitter" },
     -- anti_conceal off: the preview is read-only, the cursor line renders like the rest
     opts = { enabled = false, file_types = { "markdown" }, anti_conceal = { enabled = false } },
+  },
+
+  -- Ctrl+Y is redo (as in VS Code on Windows): the completion menu keeps it to accept
+  -- a suggestion only while it is open, otherwise it redoes
+  {
+    "saghen/blink.cmp",
+    optional = true,
+    opts = function(_, opts)
+      opts.keymap = opts.keymap or {}
+      opts.keymap["<C-y>"] = {
+        "select_and_accept",
+        function()
+          vim.schedule(function() vim.cmd("redo") end)
+          return true
+        end,
+      }
+    end,
   },
 
   -- php-cs-fixer and phpcs need a local PHP; skip them when PHP is not installed

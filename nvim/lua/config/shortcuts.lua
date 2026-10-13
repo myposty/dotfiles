@@ -1,39 +1,41 @@
 -- VS Code style shortcuts shown in the F1 list and on the start screen.
--- Each entry: keys as you press them, what it does, and the action to run.
+-- Each entry: keys as you press them (the VS Code key), `alt` = the universal key that
+-- reaches nvim in every terminal (when the VS Code key needs Ctrl+Shift / Cmd), what it
+-- does, and the action to run.
 local M = {}
 
 M.list = {
-  { keys = "Ctrl+Shift+O", desc = "Open folder", run = function() Snacks.picker.projects() end, home = "o" },
-  { keys = "Ctrl+Shift+K", desc = "Browse folders", run = function() require("config.folders").open() end, home = "k" },
+  { keys = "Ctrl+Shift+O", alt = "Alt+O", desc = "Open folder", run = function() Snacks.picker.projects() end, home = "o" },
+  { keys = "Ctrl+Shift+K", alt = "Alt+K", desc = "Browse folders", run = function() require("config.folders").open() end, home = "k" },
   { keys = "Ctrl+P", desc = "Find file", run = function() LazyVim.pick("files")() end, home = "f" },
-  { keys = "Ctrl+Shift+R", desc = "Recent files", run = function() Snacks.picker.recent() end, home = "r" },
-  { keys = "Ctrl+Shift+F", desc = "Search in project", run = function() LazyVim.pick("live_grep")() end, home = "s" },
-  { keys = "Ctrl+Shift+P", desc = "Command palette", run = function() Snacks.picker.commands() end, home = "p" },
-  { keys = "Ctrl+Shift+A", desc = "Claude Code", run = function() require("lazy").load({ plugins = { "claudecode.nvim" } }) vim.cmd("ClaudeCodeFocus") end, home = "c" },
-  { keys = "Ctrl+Shift+G", desc = "Git (commit, push)", run = function() Snacks.lazygit() end, home = "g" },
+  { keys = "Ctrl+Shift+R", alt = "Alt+R", desc = "Recent files", run = function() Snacks.picker.recent() end, home = "r" },
+  { keys = "Ctrl+Shift+F", alt = "Alt+F", desc = "Search in project", run = function() LazyVim.pick("live_grep")() end, home = "s" },
+  { keys = "Ctrl+Shift+P", alt = "Alt+P", desc = "Command palette", run = function() Snacks.picker.commands() end, home = "p" },
+  { keys = "Ctrl+Shift+A", alt = "Alt+C", desc = "Claude Code", run = function() require("lazy").load({ plugins = { "claudecode.nvim" } }) vim.cmd("ClaudeCodeFocus") end, home = "c" },
+  { keys = "Ctrl+Shift+G", alt = "Alt+G", desc = "Git (commit, push)", run = function() Snacks.lazygit() end, home = "g" },
   { keys = "Ctrl+B", desc = "Git changes panel (opens under the explorer)", run = function() require("config.scm").open() end },
-  { keys = "Ctrl+B / Ctrl+Shift+E", desc = "File explorer (show / hide); Ctrl+Shift+E also from Claude", run = function() Snacks.explorer() end, home = "e", home_label = "File explorer", home_keys = "Ctrl+B" },
+  { keys = "Ctrl+B / Ctrl+Shift+E", alt = "Ctrl+B / Alt+E", desc = "File explorer (show / hide); Ctrl+Shift+E / Alt+E also from Claude", run = function() Snacks.explorer() end, home = "e", home_label = "File explorer", home_keys = "Ctrl+B" },
   { keys = "Space h", desc = "Start screen (logo and shortcuts)", run = function() Snacks.dashboard() end },
   { keys = ":Settings", desc = "Open the nvim configuration files", run = function() require("config.shortcuts").settings() end },
   { keys = ":DotfilesUpdate", desc = "Update the dotfiles from GitHub", run = function() vim.cmd("DotfilesUpdate") end },
   { keys = "Ctrl+`", desc = "Terminal (show / hide)", run = function() Snacks.terminal() end },
   { keys = "Space f T", desc = "New terminal", run = function() Snacks.terminal.open() end },
-  { keys = "Ctrl+1 / 2 / 3", desc = "Go to editor 1 / 2 / 3", run = function() vim.cmd("wincmd t") end },
-  { keys = "Ctrl+0", desc = "Go to the file explorer", run = function() Snacks.explorer.open() end },
+  { keys = "Ctrl+1 / 2 / 3", alt = "Alt+1 / 2 / 3", desc = "Go to editor 1 / 2 / 3", run = function() vim.cmd("wincmd t") end },
+  { keys = "Ctrl+0", alt = "Alt+0", desc = "Go to the file explorer", run = function() Snacks.explorer.open() end },
   { keys = "Ctrl+\\", desc = "Split editor", run = function() vim.cmd("vsplit") end },
   { keys = "Ctrl+J", desc = "Terminal (show / hide)", run = function() Snacks.terminal() end },
-  { keys = "Ctrl+Shift+`", desc = "New terminal", run = function() Snacks.terminal.open() end },
+  { keys = "Ctrl+Shift+`", alt = "Alt+`", desc = "New terminal", run = function() Snacks.terminal.open() end },
   { keys = "Ctrl+G", desc = "Go to line", run = function() vim.api.nvim_feedkeys(vim.keycode("<C-g>"), "m", false) end },
   { keys = "Ctrl+H", desc = "Replace in file", run = function() vim.api.nvim_feedkeys(vim.keycode("<C-h>"), "m", false) end },
-  { keys = "Ctrl+Shift+H", desc = "Replace in project", run = function() vim.api.nvim_feedkeys(vim.keycode("<C-S-h>"), "m", false) end },
+  { keys = "Ctrl+Shift+H", alt = "Alt+H", desc = "Replace in project", run = function() vim.api.nvim_feedkeys(vim.keycode("<C-S-h>"), "m", false) end },
   { keys = "Ctrl+L", desc = "Select line" },
-  { keys = "Ctrl+Shift+L", desc = "Select all occurrences (multi-cursor)" },
+  { keys = "Ctrl+Shift+L", alt = "Alt+L", desc = "Select all occurrences (multi-cursor)" },
   { keys = "Ctrl+Enter / Ctrl+Shift+Enter", desc = "New line below / above" },
-  { keys = "Ctrl+Shift+V / Ctrl+K V", desc = "Markdown: preview / edit (or click Preview at the top right)", run = function() vim.cmd("MarkdownPreview") end },
+  { keys = "Ctrl+Shift+V / Ctrl+K V", alt = "Alt+V / Ctrl+K V", desc = "Markdown: preview / edit (or click Preview at the top right)", run = function() vim.cmd("MarkdownPreview") end },
   { keys = "Click a file path in Claude", desc = "Open it in the editor (diff lines open at that line)" },
   { keys = "Alt+Z", desc = "Toggle word wrap", run = function() vim.wo.wrap = not vim.wo.wrap end },
   { keys = "F3 / Shift+F3", desc = "Next / previous search match" },
-  { keys = "Ctrl+,", desc = "Settings", run = function() require("config.shortcuts").settings() end },
+  { keys = "Ctrl+,", alt = "Alt+,", desc = "Settings", run = function() require("config.shortcuts").settings() end },
   { keys = "Ctrl+Arrows", desc = "Resize panel (or drag the border with the mouse)" },
   { keys = "Space |", desc = "Split right", run = function() vim.cmd("vsplit") end },
   { keys = "Space -", desc = "Split below", run = function() vim.cmd("split") end },
@@ -46,7 +48,7 @@ M.list = {
   { keys = "Ctrl+S", desc = "Save (formats with Prettier), keeps typing", run = function() vim.cmd("write") end },
   { keys = "Esc / i", desc = "Esc: Vim command mode (letters run commands); i: back to typing" },
   { keys = "Ctrl+W / click the X", desc = "Close the file (tab)", run = function() Snacks.bufdelete() end },
-  { keys = "Ctrl+Tab", desc = "Next tab", run = function() vim.cmd("bnext") end },
+  { keys = "Ctrl+Tab / Ctrl+Shift+Tab", alt = "Alt+] / Alt+[", desc = "Next / previous tab", run = function() vim.cmd("bnext") end },
   { keys = "Ctrl+/", desc = "Toggle comment", run = function() vim.cmd("normal gcc") end },
   { keys = "Ctrl+D", desc = "Multi-cursor on next match" },
   { keys = "Alt+Up/Down", desc = "Move line" },
@@ -55,12 +57,12 @@ M.list = {
   { keys = "F2", desc = "Rename symbol", run = function() vim.lsp.buf.rename() end },
   { keys = "F12", desc = "Go to definition", run = function() vim.lsp.buf.definition() end },
   { keys = "Shift+F12", desc = "Find references", run = function() Snacks.picker.lsp_references() end },
-  { keys = "Ctrl+.", desc = "Quick fix", run = function() vim.lsp.buf.code_action() end },
+  { keys = "Ctrl+.", alt = "Alt+.", desc = "Quick fix", run = function() vim.lsp.buf.code_action() end },
   { keys = "F8", desc = "Next problem", run = function() vim.diagnostic.jump({ count = 1, float = true }) end },
-  { keys = "Ctrl+Shift+M", desc = "Problems panel", run = function() Snacks.picker.diagnostics() end },
+  { keys = "Ctrl+Shift+M", alt = "Alt+M", desc = "Problems panel", run = function() Snacks.picker.diagnostics() end },
   { keys = "Ctrl+Alt+K", desc = "Send file to Claude", run = function() require("lazy").load({ plugins = { "claudecode.nvim" } }) vim.cmd("ClaudeCodeAdd %") end },
   { keys = "Tab", desc = "Accept Copilot suggestion" },
-  { keys = "Ctrl+Z / Ctrl+Shift+Z", desc = "Undo / redo" },
+  { keys = "Ctrl+Z / Ctrl+Shift+Z", alt = "Ctrl+Z / Ctrl+Y", desc = "Undo / redo (Ctrl+Y also redoes)" },
   { keys = "Space", desc = "All LazyVim commands (menu)", run = function() require("which-key").show({ global = true }) end },
   { keys = ":Copilot auth", desc = "Sign in to Copilot (once)", run = function() vim.cmd("Copilot auth") end },
   { keys = ":SetName", desc = "Change the name on the start screen", run = function() require("config.logo").ask() end },
@@ -76,9 +78,10 @@ end
 -- VS Code for Mac uses other keys for these
 local MAC_KEYS = {
   ["Ctrl+H"] = "Cmd+Option+F",
-  ["Ctrl+Tab"] = "Cmd+Shift+]",
+  ["Ctrl+Tab / Ctrl+Shift+Tab"] = "Cmd+Shift+] / Cmd+Shift+[",
   ["Ctrl+`"] = "Ctrl+`",
-  ["Ctrl+Arrows"] = "Ctrl+Arrows",
+  -- Ctrl+Up/Down is Mission Control on a Mac: no key for it there
+  ["Ctrl+Arrows"] = "Drag the border",
   -- Terminal.app keeps Cmd+Shift+V (paste); Ctrl+K V reaches nvim in every terminal
   ["Ctrl+Shift+V / Ctrl+K V"] = "Cmd+Shift+V / Ctrl+K V",
 }
@@ -91,10 +94,73 @@ function M.label(keys)
   return MAC_KEYS[keys] or (keys:gsub("Ctrl%+", "Cmd+"):gsub("Alt%+", "Option+"))
 end
 
+-- The universal keys: Ctrl stays Ctrl (plain Ctrl+letter reaches nvim everywhere,
+-- Cmd does not), Alt is called Option on a Mac
+local function alt_label(keys)
+  if not cmd_keys() then
+    return keys
+  end
+  return (keys:gsub("Alt%+", "Option+"))
+end
+
+-- True when the terminal delivers the VS Code keys (Ctrl+Shift, Cmd) to nvim:
+-- WezTerm and Windows Terminal, which this repo configures to forward them
+function M.forwards()
+  return vim.env.TERM_PROGRAM == "WezTerm" or vim.env.WEZTERM_PANE ~= nil or vim.env.WT_SESSION ~= nil
+end
+
+-- The key of an entry that works in the terminal in use
+function M.entry_label(entry)
+  if M.forwards() then
+    return M.label(entry.keys)
+  end
+  -- elsewhere Cmd never arrives: the universal key, or the plain Ctrl one
+  if cmd_keys() and entry.keys == "Ctrl+Arrows" then
+    return MAC_KEYS[entry.keys]
+  end
+  return alt_label(entry.alt or entry.keys)
+end
+
+-- False only when the terminal font is known to lack Nerd Font glyphs (they would
+-- show as "?" boxes). Only Terminal.app can be checked: its font is in its preferences.
+-- NVIM_NERD_FONT=0/1 forces the answer (to test).
+local nerd
+local function hex(s)
+  return (s:gsub(".", function(c) return ("%02x"):format(c:byte()) end))
+end
+function M.nerd_font()
+  if nerd ~= nil then
+    return nerd
+  end
+  local force = vim.env.NVIM_NERD_FONT
+  if force == "0" or force == "1" then
+    nerd = force == "1"
+  elseif vim.uv.os_uname().sysname == "Darwin" and vim.env.TERM_PROGRAM == "Apple_Terminal" then
+    -- the dump keeps font names as plain text or as hex bytes: look for both
+    local out = vim.fn.system({ "defaults", "read", "com.apple.Terminal" })
+    local plain = out:lower()
+    local bytes = plain:gsub("%s", "")
+    nerd = vim.v.shell_error ~= 0 or out == "" -- cannot tell: assume it has them
+    for _, mark in ipairs({ "Nerd", "NF-", "NFM-" }) do
+      mark = mark:lower()
+      if plain:find(mark, 1, true) or bytes:find(hex(mark), 1, true) then
+        nerd = true
+      end
+    end
+  else
+    nerd = true
+  end
+  return nerd
+end
+
 function M.open()
   local items = {}
   for i, s in ipairs(M.list) do
-    local keys = M.label(s.keys)
+    local keys = M.entry_label(s)
+    if s.alt and M.forwards() then
+      -- the terminal delivers both: show the VS Code key and the universal one
+      keys = M.label(s.keys) .. "  ·  " .. alt_label(s.alt)
+    end
     items[#items + 1] = { idx = i, text = keys .. " " .. s.desc, keys = keys, desc = s.desc, run = s.run }
   end
   Snacks.picker({
@@ -119,18 +185,29 @@ end
 -- Start screen entries: the shortcuts flagged with `home`, plus the list itself
 function M.dashboard_keys()
   local keys = {}
-  -- Nerd Font icons (Font Awesome range) per start screen key
+  -- Nerd Font icons (Font Awesome range) per start screen key; plain Unicode symbols
+  -- (any system font has them) when the terminal font has no Nerd glyphs
   local icons = {
     o = "\u{f07c}", k = "\u{f114}", f = "\u{f15b}", r = "\u{f1da}", s = "\u{f002}", p = "\u{f120}",
     c = "\u{f086}", g = "\u{f1d3}", e = "\u{f0e8}", ["?"] = "\u{f11c}", [","] = "\u{f013}",
     n = "\u{f040}", l = "\u{f12e}", q = "\u{f08b}",
   }
+  if not M.nerd_font() then
+    icons = {
+      o = "▸", k = "⌕", f = "≡", r = "↺", s = "⊙", p = "❯",
+      c = "✦", g = "⎇", e = "☰", ["?"] = "?", [","] = "⚙",
+      n = "✎", l = "⧉", q = "⏻",
+    }
+  end
+  -- keys_text is already the label to show
   local function entry(key, label, keys_text, action)
-    return { icon = icons[key] .. " ", key = key, desc = ("%-20s %s"):format(label, M.label(keys_text)), action = action }
+    return { icon = icons[key] .. " ", key = key, desc = ("%-20s %s"):format(label, keys_text), action = action }
   end
   for _, s in ipairs(M.list) do
     if s.home then
-      keys[#keys + 1] = entry(s.home, s.home_label or s.desc, s.home_keys or s.keys, s.run)
+      -- home_keys (Ctrl+B) is a plain Ctrl key: it works in every terminal
+      local text = s.home_keys and M.entry_label({ keys = s.home_keys }) or M.entry_label(s)
+      keys[#keys + 1] = entry(s.home, s.home_label or s.desc, text, s.run)
     end
   end
   keys[#keys + 1] = entry("?", "All shortcuts", "F1", M.open)
