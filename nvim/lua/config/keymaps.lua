@@ -160,53 +160,14 @@ map({ "n", "i", "v", "t" }, "<C-0>", function()
   end
 end, { desc = "Focus explorer" })
 
--- Markdown: switch between editing and the rendered preview (read-only, like VS Code)
-local function markdown_preview()
-  if vim.bo.filetype ~= "markdown" then
+-- Markdown: rendered preview / back to editing (see config/markdown.lua)
+map({ "n", "i", "v", "t" }, "<C-S-v>", function()
+  if not require("config.markdown").toggle() then
     -- everywhere else Ctrl+Shift+V keeps pasting, as in the terminal
     vim.api.nvim_paste(vim.fn.getreg("+"), true, -1)
-    return
-  end
-  local on = not vim.b.md_preview
-  -- the preview draws from the markdown parsers: install them first if missing
-  -- (a first install without the tree-sitter CLI leaves them out)
-  local missing = vim.tbl_filter(function(lang)
-    return not pcall(vim.treesitter.language.add, lang)
-  end, { "markdown", "markdown_inline" })
-  if on and #missing > 0 then
-    if vim.g.md_parsers_tried then
-      vim.notify("Markdown preview: could not install the markdown parsers (" .. table.concat(missing, ", ")
-        .. "). Run :checkhealth nvim-treesitter", vim.log.levels.ERROR)
-      return
-    end
-    vim.g.md_parsers_tried = true
-    local buf = vim.api.nvim_get_current_buf()
-    vim.notify("Installing the markdown preview (first time)...")
-    require("nvim-treesitter").install(missing):await(function()
-      vim.schedule(function()
-        if vim.api.nvim_buf_is_valid(buf) and vim.api.nvim_get_current_buf() == buf then
-          pcall(vim.treesitter.start, buf, "markdown")
-          markdown_preview()
-        end
-      end)
-    end)
-    return
-  end
-  vim.b.md_preview = on
-  require("render-markdown").set_buf(on)
-  vim.bo.modifiable = not on
-  if on then
-    vim.cmd.stopinsert()
-  else
-    vim.cmd.startinsert()
-  end
-end
-map({ "n", "i", "v", "t" }, "<C-S-v>", markdown_preview, { desc = "Markdown preview / edit" })
-map({ "n", "i" }, "<C-k>v", function()
-  if vim.bo.filetype == "markdown" then
-    markdown_preview()
   end
 end, { desc = "Markdown preview / edit" })
+map({ "n", "i" }, "<C-k>v", function() require("config.markdown").toggle() end, { desc = "Markdown preview / edit" })
 
 map(ANY, "<A-z>", function() vim.wo.wrap = not vim.wo.wrap end, { desc = "Toggle word wrap" })
 map({ "n", "i" }, "<F3>", "<cmd>normal! n<cr>", { desc = "Next match" })

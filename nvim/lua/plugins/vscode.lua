@@ -345,7 +345,8 @@ return {
     "MeanderingProgrammer/render-markdown.nvim",
     ft = { "markdown" },
     dependencies = { "nvim-treesitter/nvim-treesitter" },
-    opts = { enabled = false, file_types = { "markdown" } },
+    -- anti_conceal off: the preview is read-only, the cursor line renders like the rest
+    opts = { enabled = false, file_types = { "markdown" }, anti_conceal = { enabled = false } },
   },
 
   -- php-cs-fixer and phpcs need a local PHP; skip them when PHP is not installed

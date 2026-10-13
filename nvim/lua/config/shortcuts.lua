@@ -29,7 +29,7 @@ M.list = {
   { keys = "Ctrl+L", desc = "Select line" },
   { keys = "Ctrl+Shift+L", desc = "Select all occurrences (multi-cursor)" },
   { keys = "Ctrl+Enter / Ctrl+Shift+Enter", desc = "New line below / above" },
-  { keys = "Ctrl+Shift+V / Ctrl+K V", desc = "Markdown: preview / edit" },
+  { keys = "Ctrl+Shift+V / Ctrl+K V", desc = "Markdown: preview / edit (or click Preview at the top right)", run = function() vim.cmd("MarkdownPreview") end },
   { keys = "Click a file path in Claude", desc = "Open it in the editor (diff lines open at that line)" },
   { keys = "Alt+Z", desc = "Toggle word wrap", run = function() vim.wo.wrap = not vim.wo.wrap end },
   { keys = "F3 / Shift+F3", desc = "Next / previous search match" },
