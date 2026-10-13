@@ -513,6 +513,7 @@ if wezterm.target_triple:find("darwin") or os.getenv("WEZTERM_FORCE_MAC") then
     a = "\x01", z = "\x1a", d = "\x04", ["/"] = "\x1f",
     c = "\x03", x = "\x18",
     g = "\x07", l = "\x0c", j = "\x0a", ["\\"] = "\x1c",
+    k = "\x0b", -- Cmd+K V: markdown preview (outside nvim, Cmd+K keeps clearing)
   }
   for k, seq in pairs(cmd_ctrl) do
     table.insert(nvim_keys, { k, "CMD", seq, cmd_fallback[k] })

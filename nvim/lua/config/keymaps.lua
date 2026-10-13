@@ -167,7 +167,9 @@ map({ "n", "i", "v", "t" }, "<C-S-v>", function()
     vim.api.nvim_paste(vim.fn.getreg("+"), true, -1)
   end
 end, { desc = "Markdown preview / edit" })
+-- Ctrl+K V like VS Code, also with Ctrl still held for the V (Ctrl+K Ctrl+V)
 map({ "n", "i" }, "<C-k>v", function() require("config.markdown").toggle() end, { desc = "Markdown preview / edit" })
+map({ "n", "i" }, "<C-k><C-v>", function() require("config.markdown").toggle() end, { desc = "Markdown preview / edit" })
 
 map(ANY, "<A-z>", function() vim.wo.wrap = not vim.wo.wrap end, { desc = "Toggle word wrap" })
 map({ "n", "i" }, "<F3>", "<cmd>normal! n<cr>", { desc = "Next match" })
