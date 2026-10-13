@@ -90,6 +90,10 @@ function M.open(item)
     vim.cmd("silent! %bwipeout!")
     vim.fn.chdir(item.dir)
     vim.cmd("silent! source " .. vim.fn.fnameescape(item.file))
+    -- a session opened from here is a workspace again: keep saving it
+    if vim.env.NVIM_NO_SESSION ~= "1" then
+      require("persistence").start()
+    end
   end)
   if not ok then
     vim.notify("Could not open the session: " .. tostring(err), vim.log.levels.ERROR)
@@ -137,5 +141,15 @@ function M.pick()
 end
 
 vim.api.nvim_create_user_command("Sessions", M.pick, { desc = "Reopen a recent session" })
+
+-- Like VS Code: a folder opened as a workspace (`nvim`, no files) keeps its session;
+-- `nvim notes.txt` is a quick edit and must not replace the folder's session.
+-- NVIM_NO_SESSION=1 never saves (scripts, tests).
+if vim.fn.argc(-1) > 0 or vim.env.NVIM_NO_SESSION == "1" then
+  pcall(function()
+    require("lazy").load({ plugins = { "persistence.nvim" } })
+    require("persistence").stop()
+  end)
+end
 
 return M
