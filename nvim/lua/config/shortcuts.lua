@@ -67,10 +67,36 @@ M.list = {
   { keys = "F1", desc = "This list" },
 }
 
+-- On a Mac inside WezTerm, Cmd does what Ctrl does elsewhere (wezterm.lua forwards it),
+-- so the shortcuts are shown with Cmd. Other Mac terminals do not forward Cmd: Ctrl.
+-- NVIM_FORCE_MAC=1 shows the Mac labels on another OS (to check them).
+local function cmd_keys()
+  local mac = vim.uv.os_uname().sysname == "Darwin" or vim.env.NVIM_FORCE_MAC == "1"
+  local wezterm = vim.env.TERM_PROGRAM == "WezTerm" or vim.env.WEZTERM_PANE ~= nil
+  return mac and wezterm
+end
+-- VS Code for Mac uses other keys for these
+local MAC_KEYS = {
+  ["Ctrl+H"] = "Cmd+Option+F",
+  ["Ctrl+Tab"] = "Cmd+Shift+]",
+  ["Ctrl+`"] = "Ctrl+`",
+  ["Ctrl+Arrows"] = "Ctrl+Arrows",
+  ["Ctrl+Shift+V / Ctrl+K V"] = "Cmd+Shift+V",
+}
+
+-- The keys of a shortcut as they are pressed on this machine
+function M.label(keys)
+  if not cmd_keys() then
+    return keys
+  end
+  return MAC_KEYS[keys] or (keys:gsub("Ctrl%+", "Cmd+"):gsub("Alt%+", "Option+"))
+end
+
 function M.open()
   local items = {}
   for i, s in ipairs(M.list) do
-    items[#items + 1] = { idx = i, text = s.keys .. " " .. s.desc, keys = s.keys, desc = s.desc, run = s.run }
+    local keys = M.label(s.keys)
+    items[#items + 1] = { idx = i, text = keys .. " " .. s.desc, keys = keys, desc = s.desc, run = s.run }
   end
   Snacks.picker({
     title = "Shortcuts",
@@ -98,10 +124,10 @@ function M.dashboard_keys()
   local icons = {
     o = "\u{f07c}", k = "\u{f114}", f = "\u{f15b}", r = "\u{f1da}", s = "\u{f002}", p = "\u{f120}",
     c = "\u{f086}", g = "\u{f1d3}", e = "\u{f0e8}", ["?"] = "\u{f11c}", [","] = "\u{f013}",
-    n = "\u{f007}", l = "\u{f1e6}", q = "\u{f011}",
+    n = "\u{f040}", l = "\u{f12e}", q = "\u{f08b}",
   }
   local function entry(key, label, keys_text, action)
-    return { icon = icons[key] .. " ", key = key, desc = ("%-20s %s"):format(label, keys_text), action = action }
+    return { icon = icons[key] .. " ", key = key, desc = ("%-20s %s"):format(label, M.label(keys_text)), action = action }
   end
   for _, s in ipairs(M.list) do
     if s.home then

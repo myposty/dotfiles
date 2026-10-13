@@ -35,6 +35,26 @@ local function start_screen_layout(self)
   return layout
 end
 
+-- The terminal's light/dark answer can arrive after startup (and changes when the
+-- system switches theme): re-apply the matching colorscheme then
+vim.api.nvim_create_autocmd("OptionSet", {
+  pattern = "background",
+  callback = function()
+    vim.schedule(function()
+      -- compare with the exact scheme: Tokyo Night switches itself to its dark style
+      local want = vim.o.background == "light" and "tokyonight-day" or "monokai_soda"
+      if vim.g.colors_name ~= want then
+        local scheme = LazyVim.config.colorscheme
+        if type(scheme) == "function" then
+          scheme()
+        else
+          vim.cmd.colorscheme(scheme)
+        end
+      end
+    end)
+  end,
+})
+
 return {
   -- Monokai Soda (same palette as the terminal) with a transparent background,
   -- so the terminal background (opacity / blur) shows through
@@ -49,7 +69,14 @@ return {
   {
     "LazyVim/LazyVim",
     opts = {
+      -- Follows the terminal: Neovim reads its background and sets 'background'.
+      -- Dark: Monokai Soda, see-through. Light: Tokyo Night Day with its own solid
+      -- background, so text stays readable on any light terminal.
       colorscheme = function()
+        if vim.o.background == "light" then
+          vim.cmd.colorscheme("tokyonight-day")
+          return
+        end
         vim.cmd.colorscheme("monokai_soda")
         local clear = {
           "Normal", "NormalNC", "NormalFloat", "SignColumn", "LineNr", "CursorLineNr", "EndOfBuffer",
