@@ -75,7 +75,53 @@ function M.list(max)
   return out
 end
 
--- Reopen a session the way VS Code reopens a workspace. Never discards unsaved work.
+-- A buffer that does not belong in a session: its file is gone, or it lives in a
+-- temp / nvim data folder (a scratch file opened once must not come back forever)
+local function junk(buf)
+  local name = vim.api.nvim_buf_get_name(buf)
+  if name == "" or vim.bo[buf].buftype ~= "" then
+    return false
+  end
+  if vim.fn.filereadable(name) == 0 then
+    return true
+  end
+  for _, root in ipairs(ignored_roots()) do
+    if inside(name, root) then
+      return true
+    end
+  end
+  return false
+end
+
+local function drop_junk()
+  -- the files nvim was started with are a one-off, not part of the workspace
+  vim.cmd("silent! %argdelete")
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].buflisted and not vim.bo[buf].modified and junk(buf) then
+      pcall(vim.api.nvim_buf_delete, buf, {})
+    end
+  end
+end
+
+-- before persistence writes a session, leave the junk out
+vim.api.nvim_create_autocmd("User", {
+  pattern = "PersistenceSavePre",
+  group = vim.api.nvim_create_augroup("vscode_sessions", { clear = true }),
+  callback = drop_junk,
+})
+
+local function has_files()
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.bo[buf].buflisted and vim.bo[buf].buftype == "" and vim.api.nvim_buf_get_name(buf) ~= "" then
+      return true
+    end
+  end
+  return false
+end
+
+-- Reopen a session the way VS Code reopens a workspace: the folder with its explorer
+-- and the files that still exist; with no files, the start screen of that folder.
+-- Never discards unsaved work.
 function M.open(item)
   if not item then
     return
@@ -90,6 +136,7 @@ function M.open(item)
     vim.cmd("silent! %bwipeout!")
     vim.fn.chdir(item.dir)
     vim.cmd("silent! source " .. vim.fn.fnameescape(item.file))
+    drop_junk()
     -- a session opened from here is a workspace again: keep saving it
     if vim.env.NVIM_NO_SESSION ~= "1" then
       require("persistence").start()
@@ -97,7 +144,24 @@ function M.open(item)
   end)
   if not ok then
     vim.notify("Could not open the session: " .. tostring(err), vim.log.levels.ERROR)
+    return
   end
+  vim.schedule(function()
+    pcall(function() Snacks.explorer.open() end)
+    -- no files: the start screen of that folder (the start screen autocmd may
+    -- already have opened it)
+    vim.defer_fn(function()
+      local shown = false
+      for _, w in ipairs(vim.api.nvim_list_wins()) do
+        if vim.bo[vim.api.nvim_win_get_buf(w)].filetype == "snacks_dashboard" then
+          shown = true
+        end
+      end
+      if not has_files() and not shown then
+        pcall(function() Snacks.dashboard() end)
+      end
+    end, 150)
+  end)
 end
 
 function M.restore_last()
