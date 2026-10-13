@@ -189,15 +189,18 @@ OSA
     chsh -s /bin/zsh || echo "  could not make zsh the default shell (run: chsh -s /bin/zsh)"
   fi
 elif have apt-get; then
-  $sudo apt-get update -qq
-  $sudo apt-get install -y -qq git curl tar unzip gcc make ripgrep fd-find nodejs npm python3 python3-venv gpg xz-utils fontconfig >/dev/null
+  # never ask anything: in an interactive terminal some packages (tzdata) would
+  # stop the install waiting for an answer
+  apt() { $sudo env DEBIAN_FRONTEND=noninteractive apt-get "$@"; }
+  apt update -qq
+  apt install -y -qq git curl tar unzip gcc make ripgrep fd-find nodejs npm python3 python3-venv gpg xz-utils fontconfig >/dev/null
   # Debian/Ubuntu name the fd binary "fdfind"
   have fd || ln -sf "$(command -v fdfind)" "$local_bin/fd"
   if [ "$terminal" = "wezterm" ] && ! have wezterm; then
     # official WezTerm apt repository
     curl -fsSL https://apt.fury.io/wez/gpg.key | $sudo gpg --yes --dearmor -o /usr/share/keyrings/wezterm-fury.gpg
     echo 'deb [signed-by=/usr/share/keyrings/wezterm-fury.gpg] https://apt.fury.io/wez/ * *' | $sudo tee /etc/apt/sources.list.d/wezterm.list >/dev/null
-    $sudo apt-get update -qq && $sudo apt-get install -y -qq wezterm >/dev/null || echo "  could not install WezTerm"
+    apt update -qq && apt install -y -qq wezterm >/dev/null || echo "  could not install WezTerm"
   fi
 elif have dnf; then
   $sudo dnf install -y -q git curl tar unzip gcc make ripgrep fd-find nodejs npm python3 xz fontconfig
