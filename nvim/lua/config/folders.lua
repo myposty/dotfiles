@@ -27,6 +27,10 @@ end
 -- Switch the editor to the folder and show its file tree
 function M.use(dir)
   vim.cmd.cd(vim.fn.fnameescape(dir))
+  -- one explorer, showing the chosen folder (replace one already open)
+  for _, picker in ipairs(Snacks.picker.get({ source = "explorer" })) do
+    picker:close()
+  end
   Snacks.explorer.open({ cwd = dir })
 end
 

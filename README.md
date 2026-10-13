@@ -87,7 +87,7 @@ Everywhere: click a file path in Claude or a terminal to open it (a numbered dif
 
 **Images.** Copy an image and paste it into Claude with `Ctrl+V` / `Ctrl+Shift+V` (on Windows `Alt+V` also works). Opening an image file previews it inline in WezTerm, kitty or ghostty; other terminals open it in the system viewer.
 
-**Explorer.** It opens on start like in VS Code (`NVIM_NO_EXPLORER=1` skips it).
+**Explorer.** It opens when you choose a project: a recent session on the start screen, or a folder from `Ctrl+Shift+O` / `Ctrl+Shift+K`.
 
 **Sessions.** The start screen lists your recent sessions (`1` = the last one), `:Sessions` lists all of them. A session (folder, files, splits) is saved when you quit, and dotfiles updates restart nvim back to the same place.
 

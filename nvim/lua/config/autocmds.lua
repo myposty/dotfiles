@@ -404,35 +404,10 @@ require("config.scm")
 require("config.updates")
 require("config.markdown")
 
--- Recent sessions: start screen list and :Sessions (lua/config/sessions.lua)
-local sessions = require("config.sessions")
+-- Recent sessions: start screen list and :Sessions (lua/config/sessions.lua).
+-- The explorer opens when a project is chosen (a recent session, or a folder from
+-- Ctrl+Shift+O / Ctrl+Shift+K), not when nvim starts.
+require("config.sessions")
 
 -- Image files: system viewer where the terminal cannot show them (lua/config/images.lua)
 require("config.images")
-
--- The explorer is open on start, like VS Code; focus stays where it was.
--- NVIM_NO_EXPLORER=1 skips it (scripts, tests).
-if #vim.api.nvim_list_uis() > 0 and vim.env.NVIM_NO_EXPLORER ~= "1" then
-  vim.schedule(function()
-    if sessions.explorer_open() then
-      return
-    end
-    local win = vim.api.nvim_get_current_win()
-    -- the explorer takes focus once it is shown (asynchronously): give it back then
-    pcall(function()
-      Snacks.explorer.open({
-        on_show = function()
-          vim.schedule(function()
-            if vim.api.nvim_win_is_valid(win) then
-              vim.api.nvim_set_current_win(win)
-            end
-            -- keep "files open ready to type"
-            if is_file_buffer(vim.api.nvim_get_current_buf()) and vim.fn.mode() == "n" then
-              vim.cmd.startinsert()
-            end
-          end)
-        end,
-      })
-    end)
-  end)
-end
