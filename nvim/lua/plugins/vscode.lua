@@ -56,8 +56,8 @@ vim.api.nvim_create_autocmd("OptionSet", {
 -- show. There the theme runs on the 256-color palette, each color mapped to the
 -- nearest one, so it looks like Monokai Soda too.
 local function only_256_colors()
-  local truecolor = vim.env.COLORTERM == "truecolor" or vim.env.COLORTERM == "24bit"
-  return vim.env.NVIM_FORCE_256 == "1" or (vim.env.TERM_PROGRAM == "Apple_Terminal" and not truecolor)
+  -- COLORTERM=truecolor can be set there anyway (shell setups), so it is not trusted
+  return vim.env.NVIM_FORCE_256 == "1" or vim.env.TERM_PROGRAM == "Apple_Terminal"
 end
 
 -- Nearest xterm-256 color: the 6x6x6 cube or the 24-step gray ramp

@@ -17,10 +17,12 @@ function M.repo()
   return vim.v.shell_error == 0 and out[1] or nil
 end
 
+-- The repo is public: no credentials, so it never opens the macOS keychain dialog
+-- or a password prompt (credential helpers off, prompts off)
 local function git(repo, args, cb)
-  local cmd = { "git", "-C", repo }
+  local cmd = { "git", "-c", "credential.helper=", "-C", repo }
   vim.list_extend(cmd, args)
-  vim.system(cmd, { text = true }, function(res)
+  vim.system(cmd, { text = true, env = { GIT_TERMINAL_PROMPT = "0", GCM_INTERACTIVE = "never" } }, function(res)
     vim.schedule(function()
       cb(res)
     end)
