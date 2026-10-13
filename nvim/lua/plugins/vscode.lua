@@ -327,17 +327,25 @@ return {
               input = { keys = { ["<c-b>"] = { "close", mode = { "n", "i" } }, ["<c-s-e>"] = { "close", mode = { "n", "i" } } } },
             },
           },
+          -- an empty list still opens (a new machine has no recent files yet):
+          -- the key always answers instead of doing nothing
+          recent = { show_empty = true },
           projects = {
-            -- Only folders that exist on this machine (Windows, macOS or Linux)
-            dev = vim.tbl_filter(function(dir)
-              return vim.fn.isdirectory(vim.fn.expand(dir)) == 1
-            end, {
-              "~/Desktop/proyect",
-              "~/Desktop/proyect/Personal Proyect",
-              "~/projects",
-              "~/dev",
-              "~/code",
-            }),
+            show_empty = true,
+            -- Only folders that exist on this machine (Windows, macOS or Linux);
+            -- none of them on a new machine: look for projects under home
+            dev = (function()
+              local dirs = vim.tbl_filter(function(dir)
+                return vim.fn.isdirectory(vim.fn.expand(dir)) == 1
+              end, {
+                "~/Desktop/proyect",
+                "~/Desktop/proyect/Personal Proyect",
+                "~/projects",
+                "~/dev",
+                "~/code",
+              })
+              return #dirs > 0 and dirs or { "~" }
+            end)(),
             max_depth = 3,
             -- Choosing a project opens it like a folder (see lua/config/folders.lua)
             confirm = function(picker, item)
