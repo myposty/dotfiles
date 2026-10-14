@@ -2,6 +2,11 @@
 
 Neovim (LazyVim with VS Code shortcuts) and WezTerm, for Windows, macOS and Linux.
 
+| Start screen | Editor, explorer and git panel |
+|---|---|
+| ![Start screen with the shortcuts](docs/screenshots/start-screen.png) | ![Editor with the file explorer and the git changes panel](docs/screenshots/editor.png) |
+| **Markdown preview** (`Ctrl+Shift+V` / `Ctrl+K V`) | **All shortcuts** (`F1`) |
+| ![Rendered markdown preview](docs/screenshots/markdown-preview.png) | ![Shortcut list with VS Code and universal keys](docs/screenshots/shortcuts-f1.png) |
 ## Install
 
 ```sh

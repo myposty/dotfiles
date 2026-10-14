@@ -166,13 +166,21 @@ function M.open()
     end
     items[#items + 1] = { idx = i, text = keys .. " " .. s.desc, keys = keys, desc = s.desc, run = s.run }
   end
+  -- the keys column fits its longest entry (both keys can be shown), within reason;
+  -- a longer one still keeps two spaces before its description
+  local column = 0
+  for _, item in ipairs(items) do
+    column = math.max(column, vim.fn.strdisplaywidth(item.keys))
+  end
+  column = math.min(column, 32) + 2
   Snacks.picker({
     title = "Shortcuts",
     items = items,
     layout = { preset = "select" },
     format = function(item)
+      local pad = math.max(column - vim.fn.strdisplaywidth(item.keys), 2)
       return {
-        { ("%-22s"):format(item.keys), "SnacksPickerSpecial" },
+        { item.keys .. (" "):rep(pad), "SnacksPickerSpecial" },
         { item.desc, item.run and "SnacksPickerLabel" or "SnacksPickerComment" },
       }
     end,
