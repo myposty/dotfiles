@@ -113,6 +113,28 @@ test("links.resolve", function()
   eq(links.resolve("./Makefile", proj), vim.fs.normalize(vim.fs.joinpath(proj, "Makefile")), "file without extension")
 end)
 
+test("links.resolve: bare names from a `cd` folder, Git Bash paths", function()
+  local links = require("config.links")
+  local shots = vim.fs.joinpath(scratch, "proj", "Saved", "video_pb23")
+  write(vim.fs.joinpath(shots, "hi_23.0.png"))
+  local want = vim.fs.normalize(vim.fs.joinpath(shots, "hi_23.0.png"))
+  eq(links.resolve("hi_23.0.png", root, { shots }), want, "bare name in a folder from the output")
+  if vim.fn.has("win32") == 1 then
+    local msys = "/" .. want:sub(1, 1):lower() .. want:sub(3)
+    eq(links.resolve(msys, root), want, "Git Bash /c/... path")
+  end
+end)
+
+test("files nvim cannot show go to the system app", function()
+  local files = require("config.images")
+  for _, name in ipairs({ "a.mp4", "a.pdf", "a.xlsx", "a.docx", "a.zip", "a.mp3" }) do
+    assert(files.is_external(name), name .. " should open in the system app")
+  end
+  for _, name in ipairs({ "a.lua", "a.ts", "a.md", "a.csv", "a.json" }) do
+    assert(not files.is_external(name), name .. " should open in the editor")
+  end
+end)
+
 test("links.resolve ~ home", function()
   local links = require("config.links")
   local home = vim.uv.os_homedir()

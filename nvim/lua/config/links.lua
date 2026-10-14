@@ -53,28 +53,41 @@ local function is_absolute(path)
   return path:match("^/") ~= nil or path:match("^%a:/") ~= nil
 end
 
-function M.resolve(text, cwd)
+-- Git Bash / MSYS paths on Windows: /c/Users/... is C:/Users/...
+local function from_msys(path)
+  if vim.fn.has("win32") == 1 then
+    return (path:gsub("^/(%a)/", "%1:/"))
+  end
+  return path
+end
+
+-- `dirs`: folders the output was talking about (a `cd "..."` above the click),
+-- tried before the current folder
+function M.resolve(text, cwd, dirs)
   cwd = clean(cwd)
   -- ~\ or ~/ is the home folder (expand() would also eat \ and treat % and # as names)
-  text = clean(text):gsub("^~/", function() return clean(vim.uv.os_homedir()) .. "/" end)
+  text = from_msys(clean(text):gsub("^~/", function() return clean(vim.uv.os_homedir()) .. "/" end))
   local base = text:match("[^/…]+$")
   if not base or vim.fn.isdirectory(text) == 1 then
     return nil
   end
-  if not base then
-    return nil
-  end
   local head, tail = text:match("^(.-)…(.*)$")
   if not head then
-    local full = is_absolute(text) and text or (cwd .. "/" .. text)
-    if vim.fn.filereadable(full) == 1 then
-      return vim.fs.normalize(full)
+    if is_absolute(text) then
+      return vim.fn.filereadable(text) == 1 and vim.fs.normalize(text) or nil
+    end
+    for _, dir in ipairs(vim.list_extend(vim.deepcopy(dirs or {}), { cwd })) do
+      local full = clean(dir) .. "/" .. text
+      if vim.fn.filereadable(full) == 1 then
+        return vim.fs.normalize(full)
+      end
     end
     -- printed relative to another folder: find a file ending with the same path
-    if not text:find("/") then
-      return nil
+    -- (a bare name only when the output gave no folder, closest match wins)
+    if text:find("/") then
+      return search(cwd, base, function(f) return vim.endswith(f, "/" .. text) end)
     end
-    return search(cwd, base, function(f) return vim.endswith(f, "/" .. text) end)
+    return search(cwd, base, function(f) return vim.fs.basename(f) == base end)
   end
   -- shortened: search from the deepest folder that the visible start names
   local dir = head:match("^(.*)/") or ""
@@ -105,6 +118,12 @@ local function editor_window()
 end
 
 local function open(path, lnum)
+  -- video, PDF, Excel... (and images where the terminal cannot draw them): system app
+  local files = require("config.images")
+  if files.is_external(path) then
+    files.open_external(path)
+    return
+  end
   local win = editor_window()
   vim.api.nvim_set_current_win(win)
   vim.cmd.edit(vim.fn.fnameescape(path))
@@ -175,8 +194,28 @@ function M.open_at(pos)
   local line, prev, next = lines[at] or "", lines[at - 1], lines[at + 1]
   local col = vim.str_byteindex(line, "utf-32", math.max(pos.column - 1, 0), false) + 1
 
+  -- folders the output talked about, nearest first: `cd "C:/x"`, `cd '/c/x'`, `cd x`
+  -- (Claude's Bash lines), so a bare file name printed below one is found there
+  local dirs = {}
+  for i = at, math.max(at - 80, 1), -1 do
+    local l = lines[i] or ""
+    for dir in l:gmatch("cd%s+\"([^\"]+)\"") do
+      dirs[#dirs + 1] = dir
+    end
+    for dir in l:gmatch("cd%s+'([^']+)'") do
+      dirs[#dirs + 1] = dir
+    end
+    for dir in l:gmatch("cd%s+([^%s\"';&|]+)") do
+      dirs[#dirs + 1] = dir
+    end
+  end
+  dirs = vim.tbl_map(function(d)
+    d = from_msys(clean(d))
+    return is_absolute(d) and d or (clean(cwd) .. "/" .. d)
+  end, dirs)
+
   local function try(text, lnum)
-    local path = M.resolve(text, cwd)
+    local path = M.resolve(text, cwd, dirs)
     if path then
       vim.schedule(function() open(path, lnum) end)
       return true
