@@ -74,19 +74,24 @@ end
 
 -- Draw an image with chafa in a fresh terminal buffer shown in `win`; returns the buffer
 local function draw(win, path)
-  local width = math.max(vim.api.nvim_win_get_width(win) - 1, 10)
+  -- like VS Code: the whole image, as big as fits the panel without distortion, centered.
+  -- One row less than the panel, so the drawing never scrolls its first row away.
+  local width = math.max(vim.api.nvim_win_get_width(win), 10)
   local height = math.max(vim.api.nvim_win_get_height(win) - 1, 5)
   -- Terminal.app (and others nvim runs with 256 colors) get a 256-color drawing
   local colors = vim.o.termguicolors and "full" or "256"
-  local res = vim.system({ chafa_cmd(), "--size", width .. "x" .. height, "--format", "symbols", "--colors", colors,
-    "--animate", "off", "--polite", "on", path }, { text = true }):wait(10000)
+  local res = vim.system({ chafa_cmd(), "--view-size", width .. "x" .. height, "--scale", "max",
+    "--align", "mid,mid", "--format", "symbols", "--colors", colors, "--animate", "off", "--polite", "on", path },
+    { text = true }):wait(10000)
   local buf = vim.api.nvim_create_buf(true, false)
   vim.b[buf].image_view = path
   vim.api.nvim_win_set_buf(win, buf)
   -- a terminal surface with no process behind it: it shows the colors, never exits
   local chan = vim.api.nvim_open_term(buf, {})
   if res.code == 0 then
-    vim.api.nvim_chan_send(chan, ((res.stdout or ""):gsub("\r?\n", "\r\n")))
+    -- no trailing newline: it would push the drawing up one row
+    local out = (res.stdout or ""):gsub("[\r\n]+$", "")
+    vim.api.nvim_chan_send(chan, (out:gsub("\r?\n", "\r\n")))
   else
     vim.api.nvim_chan_send(chan, "Could not draw " .. path .. "\r\n" .. (res.stderr or ""))
   end
