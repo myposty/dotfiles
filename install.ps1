@@ -45,6 +45,16 @@ if (-not (Get-Command tree-sitter -ErrorAction SilentlyContinue)) {
   $npmBin = (npm prefix -g)
   if ($npmBin -and ($env:Path -split ";") -notcontains $npmBin) { $env:Path += ";$npmBin" }
 }
+# chafa: draws images inside nvim in terminals without graphics (Windows Terminal)
+if (-not (Get-Command chafa -ErrorAction SilentlyContinue)) {
+  Write-Host "  installing chafa"
+  try {
+    winget install -e --id hpjansson.Chafa --accept-source-agreements --accept-package-agreements | Out-Null
+    Refresh-Path
+  } catch {
+    Write-Warning "could not install chafa (images then open in the system viewer): $_"
+  }
+}
 # ImageMagick: Snacks image converts image formats with `magick` (optional, only warns)
 if (-not (Get-Command magick -ErrorAction SilentlyContinue)) {
   Write-Host "  installing ImageMagick"

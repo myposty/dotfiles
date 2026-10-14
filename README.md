@@ -85,7 +85,7 @@ The **Any terminal** column works in every terminal. `Alt+P` is `Option+P` on a 
 
 Everywhere: click a file path in Claude or a terminal to open it (a numbered diff line opens at that line); `Space` opens every LazyVim command; with the explorer open, the Git changes panel sits under the file tree (`s` stage, `c` commit, `p` push, `P` pull).
 
-**Images.** Copy an image and paste it into Claude with `Ctrl+V` / `Ctrl+Shift+V` (on Windows `Alt+V` also works). Opening an image file previews it inline in WezTerm, kitty or ghostty; other terminals open it in the system viewer.
+**Images.** Copy an image and paste it into Claude with `Ctrl+V` / `Ctrl+Shift+V` (on Windows `Alt+V` also works). Images open inside nvim like in VS Code: as real images in WezTerm, kitty or ghostty, and drawn with colored blocks by chafa in any other terminal (Windows Terminal, Terminal.app, GNOME); `q` or `Ctrl+W` closes the tab. Video, PDF, Office and other files nvim cannot show open in the system app.
 
 **Explorer.** It opens when you choose a project: a recent session on the start screen, or a folder from `Ctrl+Shift+O` / `Ctrl+Shift+K`.
 

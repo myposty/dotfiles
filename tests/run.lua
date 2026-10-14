@@ -357,7 +357,39 @@ test("clipboard.has_image returns a boolean", function()
 end)
 
 -- ----------------------------------------------------------------- images
-test("images open in the system viewer", function()
+test("images open inside the editor with chafa (terminal without graphics)", function()
+  local png = vim.base64.decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==")
+  local path = vim.fs.joinpath(scratch, "inside.png")
+  vim.fn.mkdir(scratch, "p")
+  local f = assert(io.open(path, "wb"))
+  f:write(png)
+  f:close()
+  local files = require("config.images")
+  local real_supports = Snacks.image.supports_terminal
+  Snacks.image.supports_terminal = function() return false end
+  if files.is_external(path) then
+    Snacks.image.supports_terminal = real_supports
+    return -- no chafa on this machine: the system viewer test below covers it
+  end
+  local opened
+  local real_open = vim.ui.open
+  vim.ui.open = function(p) opened = p return {} end
+  vim.cmd("silent! %bwipeout!")
+  local ok, err = pcall(function()
+    vim.cmd.edit(vim.fn.fnameescape(path))
+    vim.wait(5000, function() return vim.b.image_view ~= nil end, 20)
+    eq(vim.fs.normalize(vim.b.image_view or ""):lower(), vim.fs.normalize(path):lower(), "image tab shows the file")
+    eq(opened, nil, "no system viewer")
+  end)
+  vim.ui.open, Snacks.image.supports_terminal = real_open, real_supports
+  vim.cmd("silent! %bwipeout!")
+  if not ok then
+    error(err, 0)
+  end
+end)
+
+test("images open in the system viewer (no chafa)", function()
   -- a valid 1x1 PNG
   local png = vim.base64.decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==")
@@ -374,6 +406,13 @@ test("images open in the system viewer", function()
     return {} -- a truthy handle: the fallback launcher must not run
   end
   Snacks.image.supports_terminal = function() return false end
+  -- without chafa the image goes to the system viewer: hide chafa for this test
+  local real_exepath = vim.fn.exepath
+  vim.fn.exepath = function(name) return name == "chafa" and "" or real_exepath(name) end
+  package.loaded["config.images"] = nil
+  local real_glob = vim.fn.glob
+  vim.fn.glob = function(p, ...) if p:find("Chafa", 1, true) then return {} end return real_glob(p, ...) end
+  require("config.images")
   vim.cmd("silent! %bwipeout!")
   local ok, err = pcall(function()
     vim.cmd.edit(vim.fn.fnameescape(path))
@@ -387,6 +426,9 @@ test("images open in the system viewer", function()
     truthy(vim.api.nvim_buf_get_name(0) ~= path, "the png buffer was left")
   end)
   vim.ui.open, Snacks.image.supports_terminal = real_open, real_supports
+  vim.fn.exepath, vim.fn.glob = real_exepath, real_glob
+  package.loaded["config.images"] = nil
+  require("config.images")
   vim.cmd("silent! %bwipeout!")
   if not ok then
     error(err, 0)

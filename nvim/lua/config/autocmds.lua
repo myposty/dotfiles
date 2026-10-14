@@ -67,9 +67,10 @@ vim.api.nvim_create_autocmd({ "BufEnter", "WinEnter" }, {
       end, 30)
       return
     end
-    if vim.bo.buftype == "terminal" and not vim.w.term_restoring then
+    -- an image tab (config/images.lua) is a picture, not something to type into
+    if vim.bo.buftype == "terminal" and not vim.w.term_restoring and not vim.b.image_view then
       vim.schedule(function()
-        if vim.bo.buftype == "terminal" and vim.fn.mode() ~= "t" and not terminal_scrolled_up() then
+        if vim.bo.buftype == "terminal" and vim.fn.mode() ~= "t" and not terminal_scrolled_up() and not vim.b.image_view then
           vim.cmd.startinsert()
         end
       end)
@@ -293,6 +294,9 @@ end, vim.api.nvim_create_namespace("vscode_mouse"))
 vim.api.nvim_create_autocmd("TermOpen", {
   group = term_focus,
   callback = function(ev)
+    if vim.b[ev.buf].image_view then
+      return -- an image tab has nothing to type into
+    end
     local keys = { "<Space>", "<CR>", "<BS>" }
     for b = 33, 126 do
       keys[#keys + 1] = b == 60 and "<lt>" or string.char(b)
