@@ -427,6 +427,27 @@ return {
     end,
   },
 
+  -- Scrollbar on the right of every panel (code, Claude, the explorer), like VS Code:
+  -- shows where you are, marks git changes, problems and search matches, and can be
+  -- dragged with the mouse
+  {
+    "lewis6991/satellite.nvim",
+    event = "VeryLazy",
+    opts = {
+      current_only = false,
+      winblend = 0,
+      excluded_filetypes = { "snacks_dashboard", "snacks_input", "snacks_notif", "lazy", "mason" },
+      handlers = {
+        cursor = { enable = false },
+        search = { enable = true },
+        diagnostic = { enable = true },
+        gitsigns = { enable = true },
+        marks = { enable = false },
+        quickfix = { enable = false },
+      },
+    },
+  },
+
   -- Tabs like VS Code: always visible, each with an X to close it (click it or Ctrl+W)
   {
     "akinsho/bufferline.nvim",

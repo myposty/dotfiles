@@ -94,6 +94,8 @@ Everywhere: click a file path in Claude or a terminal to open it (a numbered dif
 
 **Images.** Copy an image and paste it into Claude with `Ctrl+V` / `Ctrl+Shift+V` (on Windows `Alt+V` also works). Images open inside nvim like in VS Code: as real images in WezTerm, kitty or ghostty, and drawn with colored blocks by chafa in any other terminal (Windows Terminal, Terminal.app, GNOME); `q` or `Ctrl+W` closes the tab. Video, PDF, Office and other files nvim cannot show open in the system app.
 
+**Scrollbar.** Every panel (code, Claude, the explorer) has a scrollbar on the right; in code it also marks git changes, problems and search matches, and can be dragged.
+
 **Changes.** Lines changed since the last commit have a soft background (green added, blue modified, red where lines were removed) and reload by themselves when Claude or git changes the file.
 
 **Explorer.** It follows the file you open, expanding the tree to it. `a` / `Ctrl+N` new file, `A` new folder (inside the selected folder), `r` rename, `d` delete, `c` copy, `m` move. It opens when you choose a project: a recent session on the start screen, or a folder from `Ctrl+Shift+O` / `Ctrl+Shift+K`.

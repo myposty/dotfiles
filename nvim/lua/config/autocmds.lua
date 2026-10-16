@@ -416,6 +416,9 @@ require("config.sessions")
 -- Image files: system viewer where the terminal cannot show them (lua/config/images.lua)
 require("config.images")
 
+-- Scrollbar for terminals (Claude) and the explorer; code windows use satellite.nvim
+require("config.scrollbar")
+
 -- Files changed outside nvim (Claude editing them, git) reload by themselves every
 -- second, like VS Code, so the change highlights show right away. Only files without
 -- unsaved edits: never a "file changed" question over your own work.
