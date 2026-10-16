@@ -312,6 +312,11 @@ return {
           end,
         },
       },
+      -- Text boxes (new file, new folder, rename, save as...): one Esc cancels, like
+      -- VS Code (Snacks' default first leaves typing and needs a second Esc)
+      styles = {
+        input = { keys = { i_esc = { "<esc>", { "cmp_close", "cancel" }, mode = "i", expr = true } } },
+      },
       -- Ctrl+J toggles the terminal like VS Code (see keymaps.lua), so the terminal
       -- must not keep Snacks' own Ctrl+J "go to the window below"
       terminal = { win = { keys = { nav_j = false } } },
@@ -322,6 +327,13 @@ return {
             ignored = true,
             layout = { layout = { position = "left" } },
             actions = {
+              explorer_to_editor = function(picker)
+                if picker.main and vim.api.nvim_win_is_valid(picker.main) then
+                  vim.api.nvim_set_current_win(picker.main)
+                else
+                  vim.cmd("wincmd p")
+                end
+              end,
               -- A: a new folder inside the selected one
               explorer_new_folder = function(picker)
                 local base = picker:dir()
@@ -348,6 +360,8 @@ return {
                   -- (a: new file or folder/, r rename, d delete, c copy, m move)
                   ["<c-n>"] = "explorer_add",
                   ["A"] = "explorer_new_folder",
+                  -- Esc goes back to the editor and leaves the explorer open (VS Code)
+                  ["<esc>"] = "explorer_to_editor",
                 },
               },
               input = { keys = { ["<c-b>"] = { "close", mode = { "n", "i" } }, ["<c-s-e>"] = { "close", mode = { "n", "i" } } } },
