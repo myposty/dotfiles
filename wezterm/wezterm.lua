@@ -506,6 +506,8 @@ if wezterm.target_triple:find("darwin") or os.getenv("WEZTERM_FORCE_MAC") then
     w = act.CloseCurrentTab({ confirm = true }),
     f = act.Search("CurrentSelectionOrEmptyString"),
     c = act.CopyTo("Clipboard"),
+    n = act.SpawnWindow,
+    k = act.ClearScrollback("ScrollbackOnly"),
   }
   -- Cmd+letter behaves like Ctrl+letter in nvim (the VS Code shortcuts)
   local cmd_ctrl = {
@@ -514,6 +516,7 @@ if wezterm.target_triple:find("darwin") or os.getenv("WEZTERM_FORCE_MAC") then
     c = "\x03", x = "\x18",
     g = "\x07", l = "\x0c", j = "\x0a", ["\\"] = "\x1c",
     k = "\x0b", -- Cmd+K V: markdown preview (outside nvim, Cmd+K keeps clearing)
+    n = "\x0e", -- Cmd+N: new file (outside nvim, Cmd+N keeps opening a window)
   }
   for k, seq in pairs(cmd_ctrl) do
     table.insert(nvim_keys, { k, "CMD", seq, cmd_fallback[k] })

@@ -415,3 +415,21 @@ require("config.sessions")
 
 -- Image files: system viewer where the terminal cannot show them (lua/config/images.lua)
 require("config.images")
+
+-- Files changed outside nvim (Claude editing them, git) reload by themselves every
+-- second, like VS Code, so the change highlights show right away. Only files without
+-- unsaved edits: never a "file changed" question over your own work.
+local reload = vim.uv.new_timer()
+if reload then
+  reload:start(1000, 1000, vim.schedule_wrap(function()
+    if vim.fn.mode():sub(1, 1) == "c" then
+      return -- typing a command
+    end
+    for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+      if vim.api.nvim_buf_is_loaded(buf) and vim.bo[buf].buftype == "" and not vim.bo[buf].modified
+        and vim.api.nvim_buf_get_name(buf) ~= "" then
+        pcall(vim.cmd, "silent! checktime " .. buf)
+      end
+    end
+  end))
+end

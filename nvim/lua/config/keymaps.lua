@@ -50,7 +50,41 @@ map(ANY, "<C-PageUp>", "<cmd>bprevious<cr>", { desc = "Previous tab" })
 
 -- Editing
 -- Save and keep typing (LazyVim's Ctrl+S drops to Vim's command mode, where letters run commands)
-map({ "n", "i", "v", "s" }, "<C-s>", "<cmd>w<cr>", { desc = "Save" })
+-- A new file has no name yet: Ctrl+S asks for it (like VS Code's Save As), creates its
+-- folders and shows it in the explorer
+local function save()
+  if vim.bo.buftype ~= "" then
+    return
+  end
+  if vim.api.nvim_buf_get_name(0) ~= "" then
+    vim.cmd("silent! write")
+    return
+  end
+  local buf = vim.api.nvim_get_current_buf()
+  vim.ui.input({ prompt = "Save as: ", default = vim.fn.getcwd() .. "/", completion = "file" }, function(name)
+    if not name or vim.trim(name) == "" or not vim.api.nvim_buf_is_valid(buf) then
+      return
+    end
+    local path = vim.fs.normalize(vim.fn.fnamemodify(vim.trim(name), ":p"))
+    vim.fn.mkdir(vim.fs.dirname(path), "p")
+    vim.api.nvim_buf_call(buf, function()
+      vim.cmd("silent write " .. vim.fn.fnameescape(path))
+    end)
+    pcall(function() Snacks.explorer.reveal({ file = path }) end)
+  end)
+end
+map({ "n", "i", "v", "s" }, "<C-s>", save, { desc = "Save" })
+-- The change under the cursor: old lines in red, new ones in green, like VS Code's
+-- inline diff peek (Esc or moving closes it)
+map({ "n", "i" }, "<A-d>", function()
+  vim.cmd.stopinsert()
+  require("gitsigns").preview_hunk()
+end, { desc = "Show what changed here" })
+-- New file (Ctrl+N / Cmd+N), ready to type; Ctrl+S then asks for its name
+map({ "n", "i", "v" }, "<C-n>", function()
+  vim.cmd("enew")
+  vim.cmd.startinsert()
+end, { desc = "New file" })
 map({ "n", "i" }, "<C-z>", "<cmd>undo<cr>", { desc = "Undo" })
 map({ "n", "i" }, "<C-S-z>", "<cmd>redo<cr>", { desc = "Redo" })
 -- Ctrl+Y redoes like VS Code on Windows (plain Ctrl key: reaches nvim in every terminal)

@@ -53,7 +53,9 @@ Press `F1` (or `:Shortcuts`) inside nvim for the full list: type to filter, `Ent
 | File explorer | `Ctrl+B` | `Ctrl+B` | `Cmd+B` | `Ctrl+B` (`Alt+E` also from Claude) |
 | Close file | `Ctrl+W` | `Ctrl+W` | `Cmd+W` | `Ctrl+W` |
 | Next / previous tab | `Ctrl+Tab` / `Ctrl+Shift+Tab` | `Ctrl+Tab` / `Ctrl+Shift+Tab` | `Cmd+Shift+]` / `Cmd+Shift+[` | `Alt+]` / `Alt+[` |
-| Save (formats with Prettier) | `Ctrl+S` | `Ctrl+S` | `Cmd+S` | `Ctrl+S` |
+| Save (formats with Prettier; a new file asks for its name) | `Ctrl+S` | `Ctrl+S` | `Cmd+S` | `Ctrl+S` |
+| New file | `Ctrl+N` | `Ctrl+N` | `Cmd+N` | `Ctrl+N` |
+| What changed here (old lines in red, new in green) | `Alt+D` | `Alt+D` | `Option+D` | `Alt+D` |
 | Undo / redo | `Ctrl+Z` / `Ctrl+Shift+Z` | `Ctrl+Z` / `Ctrl+Shift+Z` | `Cmd+Z` / `Cmd+Shift+Z` | `Ctrl+Z` / `Ctrl+Y` |
 | Select all | `Ctrl+A` | `Ctrl+A` | `Cmd+A` | `Ctrl+A` |
 | Toggle comment | `Ctrl+/` | `Ctrl+/` | `Cmd+/` | `Ctrl+/` |
@@ -92,7 +94,9 @@ Everywhere: click a file path in Claude or a terminal to open it (a numbered dif
 
 **Images.** Copy an image and paste it into Claude with `Ctrl+V` / `Ctrl+Shift+V` (on Windows `Alt+V` also works). Images open inside nvim like in VS Code: as real images in WezTerm, kitty or ghostty, and drawn with colored blocks by chafa in any other terminal (Windows Terminal, Terminal.app, GNOME); `q` or `Ctrl+W` closes the tab. Video, PDF, Office and other files nvim cannot show open in the system app.
 
-**Explorer.** It opens when you choose a project: a recent session on the start screen, or a folder from `Ctrl+Shift+O` / `Ctrl+Shift+K`.
+**Changes.** Lines changed since the last commit have a soft background (green added, blue modified, red where lines were removed) and reload by themselves when Claude or git changes the file.
+
+**Explorer.** It follows the file you open, expanding the tree to it. `a` / `Ctrl+N` new file, `A` new folder (inside the selected folder), `r` rename, `d` delete, `c` copy, `m` move. It opens when you choose a project: a recent session on the start screen, or a folder from `Ctrl+Shift+O` / `Ctrl+Shift+K`.
 
 **Sessions.** The start screen lists your recent sessions (`1` = the last one), `:Sessions` lists all of them. A session (folder, files, splits) is saved when you quit, and dotfiles updates restart nvim back to the same place.
 

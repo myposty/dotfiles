@@ -321,9 +321,35 @@ return {
             hidden = true,
             ignored = true,
             layout = { layout = { position = "left" } },
+            actions = {
+              -- A: a new folder inside the selected one
+              explorer_new_folder = function(picker)
+                local base = picker:dir()
+                Snacks.input({ prompt = "New folder" }, function(name)
+                  if not name or vim.trim(name) == "" then
+                    return
+                  end
+                  local path = vim.fs.normalize(base .. "/" .. vim.trim(name))
+                  vim.fn.mkdir(path, "p")
+                  local tree = require("snacks.explorer.tree")
+                  tree:open(path)
+                  tree:refresh(vim.fs.dirname(path))
+                  require("snacks.explorer.actions").update(picker, { target = path })
+                end)
+              end,
+            },
             -- Ctrl+B / Ctrl+Shift+E also close it when the tree itself has focus
             win = {
-              list = { keys = { ["<c-b>"] = "close", ["<c-s-e>"] = "close" } },
+              list = {
+                keys = {
+                  ["<c-b>"] = "close",
+                  ["<c-s-e>"] = "close",
+                  -- like VS Code's New File / New Folder buttons, inside the selected folder
+                  -- (a: new file or folder/, r rename, d delete, c copy, m move)
+                  ["<c-n>"] = "explorer_add",
+                  ["A"] = "explorer_new_folder",
+                },
+              },
               input = { keys = { ["<c-b>"] = { "close", mode = { "n", "i" } }, ["<c-s-e>"] = { "close", mode = { "n", "i" } } } },
             },
           },
@@ -360,6 +386,31 @@ return {
         },
       },
     },
+  },
+
+  -- Changes since the last commit, like VS Code's diff view: a soft background on added
+  -- and modified lines, deleted lines shown in place in soft red, and the exact words
+  -- that changed a bit stronger
+  {
+    "lewis6991/gitsigns.nvim",
+    opts = function(_, opts)
+      opts.linehl = true
+      opts.word_diff = true
+      local function colors()
+        local set = function(name, bg) vim.api.nvim_set_hl(0, name, { bg = bg }) end
+        set("GitSignsAddLn", "#1f2d1c")
+        set("GitSignsChangeLn", "#1c2636")
+        set("GitSignsDeleteVirtLn", "#3a1f23")
+        set("GitSignsTopdeleteLn", "#3a1f23")
+        set("GitSignsChangedeleteLn", "#1c2636")
+        set("GitSignsAddLnInline", "#33502b")
+        set("GitSignsChangeLnInline", "#2c4466")
+        set("GitSignsDeleteLnInline", "#5c262d")
+        set("GitSignsDeleteVirtLnInline", "#5c262d")
+      end
+      colors()
+      vim.api.nvim_create_autocmd("ColorScheme", { callback = colors })
+    end,
   },
 
   -- Tabs like VS Code: always visible, each with an X to close it (click it or Ctrl+W)
