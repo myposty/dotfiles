@@ -1,29 +1,11 @@
 -- Scrollbar for the panels satellite.nvim leaves out: terminals (Claude, shells) and
 -- the file explorer list. A one-column strip on the right edge of the panel; the
--- lighter part is the slice on screen. It follows scrolling, resizing and new output.
+-- lighter part is the slice on screen. It follows scrolling, resizing and new output,
+-- and can be clicked or dragged like VS Code's (the click never reaches the panel).
 local M = {}
 
 local bars = {} -- target window -> { win = bar window, buf = bar buffer }
 local ns = vim.api.nvim_create_namespace("vscode_scrollbar")
-
-local function wanted(win)
-  if not vim.api.nvim_win_is_valid(win) then
-    return false
-  end
-  local buf = vim.api.nvim_win_get_buf(win)
-  if vim.b[buf].image_view then
-    return false
-  end
-  return vim.bo[buf].buftype == "terminal" or vim.bo[buf].filetype == "snacks_picker_list"
-end
-
-local function close(win)
-  local bar = bars[win]
-  if bar and vim.api.nvim_win_is_valid(bar.win) then
-    pcall(vim.api.nvim_win_close, bar.win, true)
-  end
-  bars[win] = nil
-end
 
 local function colors()
   -- one soft gray for every bar, like VS Code's scrollbar slider (satellite's bar in
@@ -34,18 +16,65 @@ end
 colors()
 vim.api.nvim_create_autocmd("ColorScheme", { callback = colors })
 
-local function draw(win)
+-- The Snacks picker whose list is shown in `win` (the explorer draws only what fits)
+local function picker_of(win)
+  for _, picker in ipairs(Snacks and Snacks.picker and Snacks.picker.get() or {}) do
+    if picker.list and picker.list.win and picker.list.win.win == win then
+      return picker
+    end
+  end
+end
+
+-- What the bar needs to know about a panel, and how to scroll it to a first line
+local function metrics(win)
+  if not vim.api.nvim_win_is_valid(win) then
+    return nil
+  end
+  local buf = vim.api.nvim_win_get_buf(win)
+  if vim.b[buf].image_view then
+    return nil
+  end
+  if vim.bo[buf].filetype == "snacks_picker_list" then
+    local picker = picker_of(win)
+    if not picker then
+      return nil
+    end
+    local list = picker.list
+    return {
+      total = list:count(), top = list.top, height = list:height(),
+      scroll = function(top) list:_scroll(top, true) end,
+    }
+  end
+  if vim.bo[buf].buftype ~= "terminal" then
+    return nil
+  end
+  return {
+    total = vim.api.nvim_buf_line_count(buf), top = vim.fn.line("w0", win), height = vim.api.nvim_win_get_height(win),
+    scroll = function(top)
+      vim.api.nvim_win_call(win, function()
+        vim.fn.winrestview({ topline = top, lnum = top })
+      end)
+    end,
+  }
+end
+
+local function close(win)
+  local bar = bars[win]
+  if bar and vim.api.nvim_win_is_valid(bar.win) then
+    pcall(vim.api.nvim_win_close, bar.win, true)
+  end
+  bars[win] = nil
+end
+
+local function draw(win, m)
   local height = vim.api.nvim_win_get_height(win)
   local width = vim.api.nvim_win_get_width(win)
-  local buf = vim.api.nvim_win_get_buf(win)
-  local total = vim.api.nvim_buf_line_count(buf)
-  if total <= height or height < 2 or width < 3 then
+  if m.total <= m.height or height < 2 or width < 3 then
     close(win) -- everything fits: no bar, like VS Code
     return
   end
-  local top = vim.fn.line("w0", win)
-  local size = math.max(1, math.floor(height * height / total + 0.5))
-  local pos = math.min(height - size, math.floor((top - 1) * height / total + 0.5))
+  local size = math.max(1, math.floor(height * m.height / m.total + 0.5))
+  local pos = math.min(height - size, math.floor((m.top - 1) * height / m.total + 0.5))
 
   local bar = bars[win]
   if not bar or not vim.api.nvim_win_is_valid(bar.win) then
@@ -76,9 +105,10 @@ end
 function M.refresh()
   local seen = {}
   for _, win in ipairs(vim.api.nvim_list_wins()) do
-    if wanted(win) then
+    local ok, m = pcall(metrics, win)
+    if ok and m then
       seen[win] = true
-      pcall(draw, win)
+      pcall(draw, win, m)
     end
   end
   for win in pairs(bars) do
@@ -97,6 +127,89 @@ vim.api.nvim_create_autocmd({ "WinScrolled", "WinResized", "BufWinEnter", "WinCl
 local timer = vim.uv.new_timer()
 if timer then
   timer:start(500, 500, refresh)
+end
+
+-- Mouse on a bar: the panel whose bar is under the mouse, and the row on the bar
+local function hit(pos)
+  for win, bar in pairs(bars) do
+    if vim.api.nvim_win_is_valid(win) and vim.api.nvim_win_is_valid(bar.win) then
+      local row, col = unpack(vim.api.nvim_win_get_position(bar.win))
+      local height = vim.api.nvim_win_get_height(bar.win)
+      if pos.screencol == col + 1 and pos.screenrow > row and pos.screenrow <= row + height then
+        return win, pos.screenrow - row - 1, height
+      end
+    end
+  end
+end
+
+-- The thumb's middle goes where the mouse is, like dragging VS Code's slider
+local function scroll_to(win, row, height)
+  local m = metrics(win)
+  if not m then
+    return
+  end
+  local top = math.floor((row + 0.5) / height * m.total - m.height / 2) + 1
+  top = math.max(1, math.min(top, m.total - m.height + 1))
+  m.scroll(top)
+  M.refresh() -- now, not scheduled: the drag loop below waits for the mouse
+end
+
+-- Holding the mouse on a bar: follow it until the button is released. The panel
+-- below never sees these clicks, so nothing gets selected in the explorer.
+local drag_keys = { [vim.keycode("<LeftDrag>")] = true, [vim.keycode("<LeftMouse>")] = true }
+local release = vim.keycode("<LeftRelease>")
+local function drag(win, row, height)
+  scroll_to(win, row, height)
+  vim.cmd.redraw()
+  while true do
+    local ok, key = pcall(vim.fn.getcharstr)
+    if not ok or key == release then
+      return
+    end
+    if not drag_keys[key] then
+      vim.api.nvim_feedkeys(key, "t", false) -- any other key ends the drag and still counts
+      return
+    end
+    local bar = bars[win]
+    if not (bar and vim.api.nvim_win_is_valid(bar.win)) then
+      return
+    end
+    local top = vim.api.nvim_win_get_position(bar.win)[1]
+    scroll_to(win, math.max(0, math.min(vim.fn.getmousepos().screenrow - top - 1, height - 1)), height)
+    vim.cmd.redraw()
+  end
+end
+
+local leftmouse = vim.keycode("<LeftMouse>")
+for _, mode in ipairs({ "n", "v", "i", "t" }) do
+  -- keep what a click did before: the terminal handling in autocmds.lua, or
+  -- satellite's own bar in code windows (it only maps the key when it is free)
+  local prev = vim.fn.maparg("<LeftMouse>", mode, false, true)
+  local function fallback()
+    if prev.callback then
+      local keys = prev.callback()
+      if prev.expr == 1 and type(keys) == "string" and keys ~= "" then
+        vim.api.nvim_feedkeys(keys, prev.noremap == 1 and "n" or "m", false)
+      end
+    elseif mode ~= "t" and package.loaded["satellite"] then
+      require("satellite.mouse").handle_leftmouse()
+    else
+      vim.api.nvim_feedkeys(leftmouse, "ni", false)
+    end
+  end
+  vim.keymap.set(mode, "<LeftMouse>", function()
+    local win, row, height = hit(vim.fn.getmousepos())
+    if not win then
+      return fallback()
+    end
+    if vim.fn.mode() == "t" then
+      -- a terminal only scrolls back outside typing mode, which ends after this
+      vim.cmd.stopinsert()
+      vim.schedule(function() drag(win, row, height) end)
+      return
+    end
+    drag(win, row, height)
+  end, { desc = prev.desc or "Click (scrollbar aware)" })
 end
 
 return M
