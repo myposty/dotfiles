@@ -214,6 +214,9 @@ vim.keymap.set("t", "<LeftMouse>", function()
     return ""
   end
   if info and pos.winid ~= vim.api.nvim_get_current_win() then
+    -- the release of this click lands in the new panel: it must not count as the
+    -- end of a drag there (that left the explorer or a file in visual mode)
+    vim.g.vscode_swallow_release = vim.uv.now()
     -- Windows cannot change inside an expr mapping, so switch right after it
     vim.schedule(function()
       if vim.api.nvim_win_is_valid(pos.winid) then
@@ -232,6 +235,16 @@ vim.keymap.set("t", "<LeftMouse>", function()
   end
   return ""
 end, { expr = true, desc = "Click from a terminal" })
+
+local release_key = "<LeftRelease>"
+vim.keymap.set({ "n", "v", "i" }, "<LeftRelease>", function()
+  local at = vim.g.vscode_swallow_release
+  vim.g.vscode_swallow_release = nil
+  if at and vim.uv.now() - at < 1500 then
+    return vim.fn.mode():find("^[vV\22]") and "<Esc>" or ""
+  end
+  return release_key
+end, { expr = true, desc = "Release after a click from a terminal" })
 
 vim.keymap.set("t", "<LeftDrag>", function()
   if drag then
@@ -303,6 +316,76 @@ vim.api.nvim_create_autocmd("TermOpen", {
     end
     for _, key in ipairs(keys) do
       vim.keymap.set("n", key, "i" .. key, { buffer = ev.buf, nowait = true })
+    end
+    -- the editing shortcuts too (Ctrl+X/Z/Y, Delete...): they belong to the app
+    for _, key in ipairs({ "<C-x>", "<C-z>", "<C-y>", "<Del>", "<Tab>", "<S-Tab>" }) do
+      vim.keymap.set("n", key, "i" .. key, { buffer = ev.buf, nowait = true })
+    end
+    -- with text selected (mouse drag), typing drops the selection and goes to the
+    -- app, like VS Code's terminal; Ctrl+C still copies the selection
+    for _, key in ipairs(vim.list_extend(vim.deepcopy(keys), { "<C-x>", "<C-z>", "<C-y>", "<Del>", "<Tab>", "<S-Tab>" })) do
+      vim.keymap.set("x", key, "<Esc>i" .. key, { buffer = ev.buf, nowait = true })
+    end
+    -- Ctrl+click opens a link like in VS Code (Vim would look for a "tag" there)
+    vim.keymap.set({ "n", "t", "x" }, "<C-LeftMouse>", function()
+      require("config.links").open_at(vim.fn.getmousepos())
+    end, { buffer = ev.buf })
+  end,
+})
+
+-- Read-only views (a commit, a deleted file, help, panels): keys that would edit do
+-- nothing instead of "E21: Cannot make changes". Keys a panel uses for itself (the
+-- explorer's d, the Git panel's x...) keep working.
+local EDIT_KEYS = {
+  n = { "a", "A", "i", "I", "o", "O", "p", "P", "x", "X", "u", "U", "J", "R", "r", "s", "S", "C", "D", "c", "d",
+    "~", "&", "<", ">", "=", "Q", "<C-x>", "<C-z>", "<C-y>", "<C-v>", "<Del>", "<BS>" },
+  x = { "p", "P", "x", "X", "u", "U", "J", "r", "R", "s", "S", "c", "C", "d", "D", "~", "<", ">", "=", "<C-x>",
+    "<C-v>", "<Del>", "<BS>", "<Tab>", "<S-Tab>" },
+}
+local function guard_read_only(buf)
+  if not vim.api.nvim_buf_is_valid(buf) or vim.b[buf].vscode_ro_guard ~= nil
+    or vim.bo[buf].modifiable or vim.bo[buf].buftype == "terminal" or vim.bo[buf].buftype == "prompt" then
+    return
+  end
+  local set = {}
+  for mode, keys in pairs(EDIT_KEYS) do
+    for _, key in ipairs(keys) do
+      if vim.fn.maparg(key, mode, false, true).buffer ~= 1 then
+        vim.keymap.set(mode, key, "<Nop>", { buffer = buf, nowait = true })
+        set[#set + 1] = { mode, key }
+      end
+    end
+  end
+  vim.b[buf].vscode_ro_guard = set
+end
+local function unguard(buf)
+  for _, m in ipairs(vim.b[buf].vscode_ro_guard or {}) do
+    pcall(vim.keymap.del, m[1], m[2], { buffer = buf })
+  end
+  vim.b[buf].vscode_ro_guard = nil
+end
+local ro_group = vim.api.nvim_create_augroup("vscode_read_only_keys", { clear = true })
+-- panels turn read-only after they draw and set their own keys, so also check when
+-- the cursor moves in them (cheap once done)
+vim.api.nvim_create_autocmd({ "BufEnter", "WinEnter", "CursorMoved" }, {
+  group = ro_group,
+  callback = function(ev)
+    vim.schedule(function() guard_read_only(ev.buf) end)
+  end,
+})
+-- a file switched between read-only and editable (panels only toggle it to redraw)
+vim.api.nvim_create_autocmd("OptionSet", {
+  group = ro_group,
+  pattern = "modifiable",
+  callback = function()
+    local buf = vim.api.nvim_get_current_buf()
+    if vim.bo[buf].buftype ~= "" then
+      return
+    end
+    if vim.bo[buf].modifiable then
+      unguard(buf)
+    else
+      guard_read_only(buf)
     end
   end,
 })
@@ -428,6 +511,7 @@ require("config.explorer")
 -- Closing tabs like VS Code: a diff as a whole, a side panel with its file; a diff
 -- left with one side turns back into a normal view (lua/config/tabs.lua)
 require("config.tabs")
+require("config.closebtn")
 
 -- Files changed outside nvim (Claude editing them, git) reload by themselves every
 -- second, like VS Code, so the change highlights show right away. Only files without

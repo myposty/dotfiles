@@ -10,8 +10,7 @@ local BUTTONS = {
   { icon = "󰝒", action = "explorer_add", desc = "New File" },
   { icon = "󰉗", action = "explorer_new_folder", desc = "New Folder" },
   { icon = "󰑓", action = "explorer_update", desc = "Refresh" },
-  { icon = "󰘕", action = "explorer_close_all", desc = "Collapse Folders" },
-}
+  { icon = "󰘕", action = "explorer_close_all", desc = "Collapse Folders" },}
 M.buttons = BUTTONS
 
 local function explorer()

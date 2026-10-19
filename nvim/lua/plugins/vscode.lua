@@ -192,6 +192,20 @@ return {
     },
   },
 
+  -- Long messages show as a popup in the corner, never as a panel at the bottom
+  -- (VS Code has no such panel); the panel that :messages opens closes with q / Esc
+  {
+    "folke/noice.nvim",
+    opts = function(_, opts)
+      opts.presets = opts.presets or {}
+      opts.presets.long_message_to_split = false
+      opts.views = opts.views or {}
+      opts.views.split = vim.tbl_deep_extend("force", opts.views.split or {}, {
+        close = { keys = { "q", "<Esc>" } },
+      })
+    end,
+  },
+
   -- Ctrl+D multi-cursor, like VS Code
   {
     "mg979/vim-visual-multi",

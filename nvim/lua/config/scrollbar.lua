@@ -208,6 +208,20 @@ for _, mode in ipairs({ "n", "v", "i", "t" }) do
     end
     local pos = vim.fn.getmousepos()
     local win, row, height = hit(pos)
+    if not win and mode == "v" and vim.fn.mode():find("^[vVsS\22\19]") then
+      -- a click drops the selection first, like VS Code, then lands as a normal click
+      -- (a file or terminal it lands in is ready to type)
+      vim.cmd('exe "normal! \\<Esc>"')
+      vim.api.nvim_feedkeys(leftmouse, "mi", false)
+      return vim.defer_fn(function()
+        local b = vim.api.nvim_get_current_buf()
+        local typable = vim.bo[b].buftype == "terminal"
+          or (vim.bo[b].buftype == "" and vim.bo[b].modifiable and vim.api.nvim_buf_get_name(b) ~= "")
+        if typable and vim.fn.mode() == "n" and vim.api.nvim_win_get_config(0).relative == "" then
+          vim.cmd.startinsert()
+        end
+      end, 120)
+    end
     if not win then
       for _, handler in ipairs(M.on_click) do
         if handler(pos) then

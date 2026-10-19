@@ -163,6 +163,9 @@ function M.parse(status, log)
 end
 
 local function render(lines, entries, hls)
+  if state.collapsed then
+    return -- folded to its title; filled again when it opens
+  end
   state.entries = entries
   local cursor = vim.api.nvim_win_get_cursor(state.win)
   vim.bo[state.buf].modifiable = true
@@ -485,13 +488,41 @@ function _G.VSCodeScmButton(minwid)
     vim.schedule(b.run)
   end
 end
+-- a click on the title folds the section to that title line, like a VS Code sidebar
+-- section; a click on the folded title opens it again
+function _G.VSCodeScmToggle()
+  vim.schedule(function() M.toggle_collapsed() end)
+end
 local WINBAR = (function()
-  local parts = { "%#Title# SOURCE CONTROL%*%=" }
+  local parts = { "%0@v:lua.VSCodeScmToggle@%#Title# ▾ SOURCE CONTROL%*%X%=" }
   for i, b in ipairs(BUTTONS) do
     parts[#parts + 1] = ("%%%d@v:lua.VSCodeScmButton@%%#ScmButton# %s %%*%%X"):format(i, b.icon)
   end
   return table.concat(parts) .. " "
 end)()
+
+function M.toggle_collapsed()
+  if not valid() then
+    return
+  end
+  if state.collapsed then
+    state.collapsed = false
+    vim.wo[state.win].winbar = WINBAR
+    vim.api.nvim_win_set_height(state.win, state.open_height or 12)
+    M.refresh()
+    return
+  end
+  state.open_height = vim.api.nvim_win_get_height(state.win)
+  state.collapsed = true
+  state.entries = {}
+  vim.wo[state.win].winbar = "" -- a 1-line panel has no room for a header
+  vim.bo[state.buf].modifiable = true
+  vim.api.nvim_buf_set_lines(state.buf, 0, -1, false, { " ▸ SOURCE CONTROL" })
+  vim.bo[state.buf].modifiable = false
+  vim.api.nvim_buf_clear_namespace(state.buf, ns, 0, -1)
+  vim.api.nvim_buf_set_extmark(state.buf, ns, 0, 0, { end_col = #" ▸ SOURCE CONTROL", hl_group = "Title" })
+  vim.api.nvim_win_set_height(state.win, 1)
+end
 
 -- One click selects the line, a double click opens it (diff, commit, branches):
 -- a click in passing never opens anything. The header buttons are clicks on row 0
@@ -502,6 +533,10 @@ end
 table.insert(require("config.scrollbar").on_click, function(pos)
   if not line_under_mouse(pos) then
     return false
+  end
+  if state.collapsed then
+    vim.schedule(M.toggle_collapsed)
+    return true
   end
   vim.cmd.stopinsert() -- coming from a file being typed in: the panel is never in typing mode
   vim.api.nvim_set_current_win(state.win)
@@ -573,7 +608,12 @@ local function map_keys(buf)
   vim.keymap.set("n", "b", branches, o)
   vim.keymap.set("n", "B", new_branch, o)
   vim.keymap.set("n", "o", function() open_file() end, o)
-  vim.keymap.set("n", "<cr>", function() activate() end, o)
+  vim.keymap.set("n", "<cr>", function()
+    if state.collapsed then
+      return M.toggle_collapsed()
+    end
+    activate()
+  end, o)
   vim.keymap.set({ "n", "i", "v" }, "<2-LeftMouse>", function()
     vim.cmd.stopinsert()
     local pos = vim.fn.getmousepos()
