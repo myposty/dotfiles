@@ -180,6 +180,10 @@ local function drag(win, row, height)
   end
 end
 
+-- Panels that act on one click (the Git panel) register here: fn(mousepos) returns
+-- true when it took the click
+M.on_click = {}
+
 local leftmouse = vim.keycode("<LeftMouse>")
 for _, mode in ipairs({ "n", "v", "i", "t" }) do
   -- keep what a click did before: the terminal handling in autocmds.lua, or
@@ -198,8 +202,18 @@ for _, mode in ipairs({ "n", "v", "i", "t" }) do
     end
   end
   vim.keymap.set(mode, "<LeftMouse>", function()
-    local win, row, height = hit(vim.fn.getmousepos())
+    if vim.fn.pumvisible() == 1 then
+      -- a menu is open (right-click menu, completion): the click picks from it
+      return vim.api.nvim_feedkeys(leftmouse, "ni", false)
+    end
+    local pos = vim.fn.getmousepos()
+    local win, row, height = hit(pos)
     if not win then
+      for _, handler in ipairs(M.on_click) do
+        if handler(pos) then
+          return
+        end
+      end
       return fallback()
     end
     if vim.fn.mode() == "t" then
@@ -210,6 +224,25 @@ for _, mode in ipairs({ "n", "v", "i", "t" }) do
     end
     drag(win, row, height)
   end, { desc = prev.desc or "Click (scrollbar aware)" })
+end
+
+-- Right click: panels with their own menu (explorer, Git panel) register here like
+-- on_click, from any window; elsewhere Neovim's own menu (Cut / Copy / Paste...)
+M.on_right_click = {}
+local rightmouse = vim.keycode("<RightMouse>")
+for _, mode in ipairs({ "n", "v", "i", "t" }) do
+  vim.keymap.set(mode, "<RightMouse>", function()
+    if vim.fn.pumvisible() == 1 then
+      return vim.api.nvim_feedkeys(rightmouse, "ni", false)
+    end
+    local pos = vim.fn.getmousepos()
+    for _, handler in ipairs(M.on_right_click) do
+      if handler(pos) then
+        return
+      end
+    end
+    vim.api.nvim_feedkeys(rightmouse, "ni", false)
+  end, { desc = "Right click (panel menus)" })
 end
 
 return M

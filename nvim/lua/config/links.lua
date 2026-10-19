@@ -176,6 +176,89 @@ local function joined(a, b)
   return left .. ltrim(b or ""), #left
 end
 
+-- True when `p` is a file or folder on disk, or the start of a name in an existing
+-- folder (a path cut in the middle of a name by the wrap)
+local function on_disk(p, cwd)
+  p = from_msys(clean(p)):gsub(":%d+$", ""):gsub("[%)%]\"'.,;]+$", "")
+  if p == "" then
+    return false
+  end
+  if not is_absolute(p) then
+    p = clean(cwd) .. "/" .. p
+  end
+  if vim.uv.fs_stat(p) then
+    return true
+  end
+  local parent, last = p:match("^(.*)/([^/]+)$")
+  if not parent or not vim.uv.fs_stat(parent) then
+    return false
+  end
+  last = last:lower()
+  for name in vim.fs.dir(parent) do
+    if vim.startswith(name:lower(), last) then
+      return true
+    end
+  end
+  return false
+end
+
+-- A long path that Claude wrapped onto several indented lines continues on the next
+-- line when the end of `text` plus the start of `nxt` is still a path on disk
+local function continues(text, nxt, cwd)
+  local a = rtrim(text):match("%S+$")
+  local b = ltrim(nxt or ""):match("^%S+")
+  if not a or not b then
+    return false
+  end
+  local p = (a .. b):match("[%w%._%-/\\~:…]+$") or ""
+  return p:find("[/\\]") ~= nil and #p > 3 and on_disk(p, cwd)
+end
+
+-- Lines joined back where a path was wrapped. Returns the joined lines and, for
+-- each one, where every original line starts in it: { text, first, last, starts }
+local function unwrap(lines, cwd)
+  local out, i = {}, 1
+  while lines[i] do
+    local block = { text = lines[i], first = i, last = i, starts = { [i] = 0 } }
+    while lines[block.last + 1] and continues(block.text, lines[block.last + 1], cwd) do
+      local nxt = lines[block.last + 1]
+      local trimmed = ltrim(nxt)
+      block.text = rtrim(block.text)
+      block.last = block.last + 1
+      block.starts[block.last] = #block.text - (#nxt - #trimmed)
+      block.text = block.text .. trimmed
+    end
+    out[#out + 1] = block
+    i = block.last + 1
+  end
+  return out
+end
+M.unwrap = unwrap
+
+-- Copying from a terminal: a wrapped path comes out whole, without the line breaks
+-- and indentation Claude added to fit it on screen
+vim.api.nvim_create_autocmd("TextYankPost", {
+  group = vim.api.nvim_create_augroup("vscode_unwrap_copy", { clear = true }),
+  callback = function(ev)
+    local e = vim.v.event
+    if vim.bo[ev.buf].buftype ~= "terminal" or #e.regcontents < 2 then
+      return
+    end
+    local cwd = vim.fn.getcwd()
+    local joined = vim.tbl_map(function(b) return b.text end, unwrap(e.regcontents, cwd))
+    if #joined == #e.regcontents then
+      return
+    end
+    local reg, regtype = e.regname ~= "" and e.regname or '"', e.regtype
+    vim.schedule(function()
+      vim.fn.setreg(reg, joined, regtype:sub(1, 1) == "\22" and "v" or regtype)
+      if reg ~= '"' then
+        vim.fn.setreg('"', joined, regtype:sub(1, 1) == "\22" and "v" or regtype)
+      end
+    end)
+  end,
+})
+
 -- Open the file named at a mouse position (vim.fn.getmousepos()). True when it did.
 -- In order: the path under the click (also when wrapped onto two lines), the file of
 -- a Claude header line, the file and line of a diff line, any other path on the line.
@@ -189,7 +272,7 @@ function M.open_at(pos)
   end
   local cwd = vim.fn.getcwd(pos.winid)
   local n = pos.line
-  local lines = vim.api.nvim_buf_get_lines(buf, math.max(n - 301, 0), n + 1, false)
+  local lines = vim.api.nvim_buf_get_lines(buf, math.max(n - 301, 0), n + 8, false)
   local at = math.min(n, 301) -- index of the clicked line in `lines`
   local line, prev, next = lines[at] or "", lines[at - 1], lines[at + 1]
   local col = vim.str_byteindex(line, "utf-32", math.max(pos.column - 1, 0), false) + 1
@@ -222,11 +305,27 @@ function M.open_at(pos)
     end
   end
 
-  -- 1. the path under the click, whole or split across this line and a neighbour
+  -- 1. the path under the click, whole or wrapped onto several lines
   local here = tokens(line)
   for _, t in ipairs(here) do
     if col >= t.s and col <= t.e and try(t.text, t.lnum) then
       return true
+    end
+  end
+  local top = math.max(at - 8, 1)
+  for _, block in ipairs(unwrap(vim.list_slice(lines, top, at + 8), cwd)) do
+    local i = at - top + 1
+    if block.first <= i and block.last >= i and block.first < block.last then
+      local start = block.starts[i]
+      local c = start + math.max(col - (#line - #ltrim(line)), 1) -- leading indent is gone
+      if i == block.first then
+        c = col
+      end
+      for _, t in ipairs(tokens(block.text)) do
+        if c >= t.s and c <= t.e and try(t.text, t.lnum) then
+          return true
+        end
+      end
     end
   end
   for _, pair in ipairs({ { prev, line }, { line, next } }) do

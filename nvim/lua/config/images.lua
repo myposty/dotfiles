@@ -97,7 +97,7 @@ local function draw(win, path)
   end
   pcall(vim.api.nvim_buf_set_name, buf, vim.fn.fnamemodify(path, ":t") .. " (image)")
   vim.bo[buf].buflisted = true
-  vim.keymap.set("n", "q", function() Snacks.bufdelete(buf) end, { buffer = buf, desc = "Close image" })
+  vim.keymap.set("n", "q", function() require("config.tabs").close(buf) end, { buffer = buf, desc = "Close image" })
   return buf
 end
 

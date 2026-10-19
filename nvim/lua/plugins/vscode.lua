@@ -334,6 +334,10 @@ return {
                   vim.cmd("wincmd p")
                 end
               end,
+              -- r: rename only the name (and folders keep their open files)
+              explorer_rename = function(picker, item)
+                require("config.explorer").rename(picker, item)
+              end,
               -- A: a new folder inside the selected one
               explorer_new_folder = function(picker)
                 local base = picker:dir()
@@ -353,6 +357,9 @@ return {
             -- Ctrl+B / Ctrl+Shift+E also close it when the tree itself has focus
             win = {
               list = {
+                -- header with the project name and New File / New Folder / Refresh /
+                -- Collapse buttons (lua/config/explorer.lua)
+                wo = { winbar = "%{%v:lua.require'config.explorer'.winbar()%}" },
                 keys = {
                   ["<c-b>"] = "close",
                   ["<c-s-e>"] = "close",
@@ -456,7 +463,36 @@ return {
         always_show_bufferline = true,
         show_buffer_close_icons = true,
         show_close_icon = false,
+        indicator = { style = "icon", icon = "▎" },
+        -- X / middle click close like Ctrl+W (a diff as a whole, a side panel with its
+        -- file); right click opens the tab menu instead of closing it by surprise
+        close_command = function(n) require("config.tabs").close(n) end,
+        middle_mouse_command = function(n) require("config.tabs").close(n) end,
+        right_mouse_command = function(n) require("config.tabs").context(n) end,
       },
+      -- The open file's tab stands out like VS Code's active tab: its own background,
+      -- a blue bar and a bright name, also while the explorer or Claude has the focus;
+      -- the other tabs stay dim. The background is explicit because the color theme
+      -- is transparent (bufferline cannot shade it by itself).
+      highlights = (function()
+        local active_bg = "#2b2e33"
+        local hl = { background = { fg = "#8b8b8b" } }
+        for _, state in ipairs({ "selected", "visible" }) do
+          for _, name in ipairs({ "close_button", "numbers", "diagnostic", "hint", "hint_diagnostic", "info",
+            "info_diagnostic", "warning", "warning_diagnostic", "error", "error_diagnostic", "modified", "duplicate",
+            "separator", "pick" }) do
+            hl[name .. "_" .. state] = { bg = active_bg }
+          end
+          hl["buffer_" .. state] = { fg = "#ffffff", bg = active_bg, bold = true, italic = false }
+          -- a file with problems shows its name in red / yellow, like VS Code
+          for name, fg in pairs({ error = "#f48771", warning = "#cca700", info = "#ffffff", hint = "#ffffff" }) do
+            hl[name .. "_" .. state] = { fg = fg, bg = active_bg, bold = true, italic = false }
+            hl[name .. "_diagnostic_" .. state] = { fg = fg, bg = active_bg }
+          end
+          hl["indicator_" .. state] = { fg = "#0078d4", bg = active_bg }
+        end
+        return hl
+      end)(),
     },
   },
 
@@ -527,6 +563,72 @@ return {
       if vim.fn.executable("php") == 0 then
         opts.linters_by_ft = opts.linters_by_ft or {}
         opts.linters_by_ft.php = {}
+      end
+    end,
+  },
+
+  -- Clicking the branch in the status bar switches branch, like VS Code
+  {
+    "nvim-lualine/lualine.nvim",
+    opts = function(_, opts)
+      local b = opts.sections and opts.sections.lualine_b
+      for i, c in ipairs(b or {}) do
+        if c == "branch" or (type(c) == "table" and c[1] == "branch") then
+          b[i] = vim.tbl_extend("force", type(c) == "table" and c or { "branch" }, {
+            on_click = function() Snacks.picker.git_branches({ title = "Switch branch  (Ctrl+A new · Ctrl+X delete)" }) end,
+          })
+        end
+      end
+    end,
+  },
+
+  -- Framework language servers start only inside a project of that framework, like
+  -- VS Code extensions that activate on a workspace: the Angular server started (and
+  -- crashed) on every TypeScript file of any project, Tailwind on every web file.
+  -- Plain language servers (TypeScript, PHP, Python...) already start only for their
+  -- file types, and plugins load when first needed.
+  {
+    "neovim/nvim-lspconfig",
+    opts = function(_, opts)
+      local function depends_on(pkg_dir, deps)
+        local ok, pkg = pcall(function()
+          return vim.json.decode(table.concat(vim.fn.readfile(pkg_dir .. "/package.json"), "\n"))
+        end)
+        if not ok or type(pkg) ~= "table" then
+          return false
+        end
+        for _, field in ipairs({ "dependencies", "devDependencies", "peerDependencies" }) do
+          for _, dep in ipairs(deps) do
+            if type(pkg[field]) == "table" and pkg[field][dep] then
+              return true
+            end
+          end
+        end
+        return false
+      end
+      local function only_in(markers, deps)
+        return function(bufnr, on_dir)
+          local root = vim.fs.root(bufnr, markers)
+          local pkg = not root and vim.fs.root(bufnr, "package.json")
+          if pkg and depends_on(pkg, deps) then
+            root = pkg
+          end
+          if root then
+            on_dir(root)
+          end
+        end
+      end
+      local rules = {
+        angularls = only_in({ "angular.json" }, { "@angular/core" }),
+        tailwindcss = only_in({ "tailwind.config.js", "tailwind.config.cjs", "tailwind.config.mjs", "tailwind.config.ts" },
+          { "tailwindcss", "@tailwindcss/vite", "@tailwindcss/postcss" }),
+      }
+      opts.servers = opts.servers or {}
+      for name, root_dir in pairs(rules) do
+        if opts.servers[name] ~= nil then
+          opts.servers[name] = type(opts.servers[name]) == "table" and opts.servers[name] or {}
+          opts.servers[name].root_dir = root_dir
+        end
       end
     end,
   },

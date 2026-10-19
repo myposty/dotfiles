@@ -18,6 +18,10 @@ opt.swapfile = false
 opt.tabstop = 2
 opt.shiftwidth = 2
 opt.expandtab = true
+-- Shift+arrows (and Shift+Home/End) select text, plain arrows drop the selection, and
+-- typing replaces it, like VS Code; Tab / Shift+Tab then indent the selected lines
+opt.keymodel = "startsel,stopsel"
+opt.selectmode = "key"
 
 -- PHP: intelephense (Node based) works without a local PHP install, same as VS Code
 vim.g.lazyvim_php_lsp = "intelephense"

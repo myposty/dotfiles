@@ -135,6 +135,22 @@ test("files nvim cannot show go to the system app", function()
   end
 end)
 
+test("links.unwrap: a path wrapped onto three indented lines is one path again", function()
+  local dir = vim.fs.joinpath(scratch, "wrapped-folder-name-long", "inner-segment")
+  write(vim.fs.joinpath(dir, "sample-1.wav"), { "x" })
+  local full = vim.fs.joinpath(dir, "sample-1.wav"):gsub("/", "\\")
+  local blocks = require("config.links").unwrap({
+    "Para escucharlos:",
+    "  - " .. full:sub(1, #full - 30),
+    "    " .. full:sub(#full - 29, #full - 12),
+    "    " .. full:sub(#full - 11),
+    "  next line",
+  }, scratch)
+  eq(#blocks, 3, "title, the path, the next line")
+  eq(blocks[2].text, "  - " .. full, "joined without breaks or indentation")
+  eq(blocks[3].text, "  next line", "plain text is not glued on")
+end)
+
 test("links.resolve ~ home", function()
   local links = require("config.links")
   local home = vim.uv.os_homedir()
@@ -295,6 +311,153 @@ test("keymaps exist", function()
   truthy(mapped("<C-v>", "t"), "<C-v> in t")
   truthy(not mapped("<A-v>", "t"), "<A-v> must not be mapped in terminal mode")
   truthy(vim.fn.maparg("<C-a>", "n"):find("ggVG", 1, true), "<C-a> selects all")
+  -- Tab / Shift+Tab: typing, a Shift+Arrows selection (Select mode) and a mouse one
+  eq(vim.fn.maparg("<S-Tab>", "i"), "<C-D>", "Shift+Tab outdents while typing")
+  eq(vim.fn.maparg("<Tab>", "s"), "<C-G>>gv<C-G>", "Tab indents a Shift+Arrows selection")
+  eq(vim.fn.maparg("<Tab>", "x"), ">gv", "Tab indents a selection")
+  eq(vim.o.keymodel, "startsel,stopsel", "Shift+Arrows select")
+  for _, mode in ipairs({ "n", "i", "t" }) do
+    truthy(mapped("<C-n>", mode), "<C-n> (new file) in " .. mode)
+    truthy(mapped("<C-Tab>", mode), "<C-Tab> in " .. mode)
+  end
+end)
+
+test("secrets: values hidden in env files and secret keys elsewhere", function()
+  local s = require("config.secrets")
+  local function masked(line, all)
+    local a, b = s.value_range(line, all)
+    return a and line:sub(a + 1, b) or nil
+  end
+  truthy(s.is_env_file("/p/.env") and s.is_env_file("/p/.env.local") and s.is_env_file("prod.env"), "env file names")
+  truthy(not s.is_env_file("/p/environment.ts"), "environment.ts is not an env file")
+  eq(masked("API_KEY=supersecret", true), "supersecret", "plain value")
+  eq(masked('export TOKEN="abc"', true), "abc", "quotes stay visible")
+  eq(masked("PORT=3000", true), "3000", "env files hide every value")
+  eq(masked("# API_KEY=x", true), nil, "comments")
+  eq(masked("EMPTY=", true), nil, "empty value")
+  eq(masked("  password: hunter2", false), "hunter2", "secret key in yaml")
+  eq(masked('  "apiKey": "k-123",', false), "k-123", "secret key in json")
+  eq(masked("  port: 3000", false), nil, "other keys stay visible outside env files")
+  local path = vim.fs.joinpath(scratch, ".env")
+  write(path, { "API_KEY=supersecret", "# note" })
+  vim.cmd.edit(vim.fn.fnameescape(path))
+  local buf = vim.api.nvim_get_current_buf()
+  s.mask(buf)
+  local marks = vim.api.nvim_buf_get_extmarks(buf, vim.api.nvim_create_namespace("vscode_secrets"), 0, -1, { details = true })
+  eq(#marks, #"supersecret", "one star per character")
+  eq(marks[1][4].virt_text[1][1], "*", "shown as *")
+  vim.cmd("bwipeout!")
+end)
+
+test("explorer: renaming a folder keeps the open files (and closes no other tab)", function()
+  local ex = require("config.explorer")
+  local dir = vim.fs.joinpath(scratch, "ren")
+  write(vim.fs.joinpath(dir, "src", "util.ts"), { "u" })
+  write(vim.fs.joinpath(dir, "src.ts"), { "other" }) -- a name the old pattern lookup matched
+  vim.cmd.edit(vim.fn.fnameescape(vim.fs.joinpath(dir, "src.ts")))
+  local other = vim.api.nvim_get_current_buf()
+  vim.cmd.edit(vim.fn.fnameescape(vim.fs.joinpath(dir, "src", "util.ts")))
+  local buf = vim.api.nvim_get_current_buf()
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "unsaved" })
+  truthy(ex.safe_rename(vim.fs.joinpath(dir, "src"), vim.fs.joinpath(dir, "lib")), "renamed")
+  truthy(vim.fn.isdirectory(vim.fs.joinpath(dir, "lib")) == 1, "lib exists")
+  truthy(vim.api.nvim_buf_is_valid(other), "the other tab is still open")
+  truthy(vim.api.nvim_buf_is_valid(buf), "same buffer (tab keeps its place)")
+  truthy(vim.fs.normalize(vim.api.nvim_buf_get_name(buf)):find("/ren/lib/util.ts$"), "buffer follows the folder")
+  eq(vim.fn.readfile(vim.fs.joinpath(dir, "lib", "util.ts"))[1], "unsaved", "unsaved edit saved, not lost")
+  for _, b in ipairs({ buf, other }) do
+    pcall(vim.api.nvim_buf_delete, b, { force = true })
+  end
+end)
+
+test("menu: opens with the first item, runs a picked one, closes", function()
+  local menu = require("config.menu")
+  local ran
+  menu.open({ { "First", function() ran = "first" end }, "-", { "Second", function() ran = "second" end } })
+  truthy(menu.is_open(), "open")
+  eq(vim.api.nvim_win_get_cursor(0)[1], 1, "first item selected")
+  vim.api.nvim_feedkeys(vim.keycode("j<CR>"), "x", false)
+  vim.wait(200, function() return ran ~= nil end)
+  eq(ran, "second", "j skips the separator, Enter runs")
+  truthy(not menu.is_open(), "closed after running")
+  menu.open({ { "A", function() ran = "a" end } })
+  vim.api.nvim_feedkeys(vim.keycode("<Esc>"), "x", false)
+  truthy(not menu.is_open(), "Esc closes")
+end)
+
+test("tabs.close: a diff closes as one tab from either side", function()
+  local tabs = require("config.tabs")
+  local dir = vim.fs.joinpath(scratch, "difftabs")
+  write(vim.fs.joinpath(dir, "keep.ts"), { "keep" })
+  write(vim.fs.joinpath(dir, "changed.ts"), { "new" })
+  vim.cmd("only")
+  vim.cmd.edit(vim.fn.fnameescape(vim.fs.joinpath(dir, "keep.ts")))
+  local keep = vim.api.nvim_get_current_buf()
+  -- like the Git panel: old version (read-only) on the left, the file on the right
+  local function open_diff()
+    vim.cmd.edit(vim.fn.fnameescape(vim.fs.joinpath(dir, "changed.ts")))
+    local right, file = vim.api.nvim_get_current_win(), vim.api.nvim_get_current_buf()
+    local old = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_buf_set_lines(old, 0, -1, false, { "old" })
+    vim.bo[old].bufhidden = "wipe"
+    local left = vim.api.nvim_open_win(old, false, { split = "left", win = right })
+    for _, w in ipairs({ left, right }) do
+      vim.api.nvim_win_call(w, function() vim.cmd("diffthis") end)
+    end
+    vim.w[left].vscode_diff_peer, vim.w[right].vscode_diff_peer = right, left
+    vim.w[left].vscode_diff_close_file = true
+    return left, right, old, file
+  end
+  local function diffs()
+    return #vim.tbl_filter(function(w) return vim.wo[w].diff end, vim.api.nvim_tabpage_list_wins(0))
+  end
+
+  local _, right, _, file = open_diff()
+  vim.api.nvim_set_current_win(right)
+  tabs.close()
+  eq(#tabs.editor_wins(), 1, "file side: one panel left")
+  eq(diffs(), 0, "file side: no diff left")
+  truthy(not vim.bo[file].buflisted, "file side: the file tab closed")
+  eq(vim.api.nvim_get_current_buf(), keep, "file side: the other tab shows")
+
+  local left, _, old
+  left, _, old, file = open_diff()
+  vim.api.nvim_set_current_win(left)
+  tabs.close()
+  eq(#tabs.editor_wins(), 1, "old side: one panel left")
+  eq(diffs(), 0, "old side: no diff left")
+  truthy(not vim.api.nvim_buf_is_valid(old), "old side: the old version is gone")
+  truthy(not vim.bo[file].buflisted, "old side: the file opened for the diff closed too")
+
+  left = open_diff()
+  vim.api.nvim_win_close(left, true) -- :q on one side
+  vim.wait(200, function() return diffs() == 0 end)
+  eq(diffs(), 0, ":q on one side: the other is a normal view again")
+  tabs.close()
+  pcall(vim.api.nvim_buf_delete, keep, { force = true })
+end)
+
+test("scm.parse: branch, staged, changes and graph", function()
+  local status = table.concat({
+    "## main...origin/main [ahead 1, behind 2]",
+    "M  src/util.ts",
+    " M app.ts",
+    "?? new.txt",
+  }, "\n")
+  local log = "* \31abc1234\31add feature\31HEAD -> main, origin/main\n|\n* \31def5678\31first\31"
+  local lines, entries = require("config.scm").parse(status, log)
+  local text = table.concat(lines, "\n")
+  truthy(lines[1]:find("main  ↑1 ↓2", 1, true), "branch with ahead / behind: " .. lines[1])
+  eq(entries[1].kind, "branch", "branch line")
+  eq(entries[2].kind, "commit_box", "commit line")
+  truthy(text:find("STAGED CHANGES  1", 1, true) and text:find("CHANGES  2", 1, true), "sections")
+  local kinds = {}
+  for _, e in pairs(entries) do
+    kinds[e.kind] = (kinds[e.kind] or 0) + 1
+  end
+  eq(kinds.file, 3, "three files")
+  eq(kinds.commit, 2, "two commits in the graph")
+  truthy(text:find("add feature  main, origin/main", 1, true), "branch names next to the commit")
 end)
 
 -- ----------------------------------------------------------- start screen

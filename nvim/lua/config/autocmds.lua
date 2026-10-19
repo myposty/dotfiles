@@ -419,6 +419,16 @@ require("config.images")
 -- Scrollbar for terminals (Claude) and the explorer; code windows use satellite.nvim
 require("config.scrollbar")
 
+-- .env values (and secret-looking keys anywhere) show as ******** (lua/config/secrets.lua)
+require("config.secrets")
+
+-- New File / New Folder / Refresh / Collapse buttons on top of the explorer
+require("config.explorer")
+
+-- Closing tabs like VS Code: a diff as a whole, a side panel with its file; a diff
+-- left with one side turns back into a normal view (lua/config/tabs.lua)
+require("config.tabs")
+
 -- Files changed outside nvim (Claude editing them, git) reload by themselves every
 -- second, like VS Code, so the change highlights show right away. Only files without
 -- unsaved edits: never a "file changed" question over your own work.

@@ -42,9 +42,27 @@ map("i", "<A-Right>", "<C-o>w", { desc = "Next word" })
 map("i", "<A-BS>", "<C-w>", { desc = "Delete previous word" })
 
 -- Buffers (tabs)
-map(ANY, "<C-w>", function() Snacks.bufdelete() end, { desc = "Close tab" })
-map(ANY, "<C-Tab>", "<cmd>bnext<cr>", { desc = "Next tab" })
-map(ANY, "<C-S-Tab>", "<cmd>bprevious<cr>", { desc = "Previous tab" })
+-- a diff closes both sides, a side panel closes with its file (lua/config/tabs.lua)
+map(ANY, "<C-w>", function() require("config.tabs").close() end, { desc = "Close tab" })
+-- from Claude or a terminal too, like VS Code (the tab opens in the code area)
+local editor_win -- the code area window (below, with Ctrl+N)
+local function cycle(cmd)
+  return function()
+    if vim.fn.mode() == "t" then
+      vim.cmd.stopinsert() -- leave the terminal first, or it takes the typing mode back
+    end
+    vim.schedule(function()
+      local win = editor_win()
+      if win then
+        vim.api.nvim_set_current_win(win)
+      end
+      -- in the order of the tab bar, skipping terminals
+      vim.cmd(vim.fn.exists(":" .. cmd) == 2 and cmd or (cmd:find("Next") and "bnext" or "bprevious"))
+    end)
+  end
+end
+map({ "n", "i", "v", "t" }, "<C-Tab>", cycle("BufferLineCycleNext"), { desc = "Next tab" })
+map({ "n", "i", "v", "t" }, "<C-S-Tab>", cycle("BufferLineCyclePrev"), { desc = "Previous tab" })
 map(ANY, "<C-PageDown>", "<cmd>bnext<cr>", { desc = "Next tab" })
 map(ANY, "<C-PageUp>", "<cmd>bprevious<cr>", { desc = "Previous tab" })
 
@@ -80,10 +98,40 @@ map({ "n", "i" }, "<A-d>", function()
   vim.cmd.stopinsert()
   require("gitsigns").preview_hunk()
 end, { desc = "Show what changed here" })
--- New file (Ctrl+N / Cmd+N), ready to type; Ctrl+S then asks for its name
-map({ "n", "i", "v" }, "<C-n>", function()
+-- New file (Ctrl+N / Cmd+N), ready to type; Ctrl+S then asks for its name.
+-- It opens in the code area even from Claude, a terminal or a side panel.
+function editor_win()
+  local function is_editor(w)
+    local b = vim.api.nvim_win_get_buf(w)
+    return vim.api.nvim_win_get_config(w).relative == "" and vim.bo[b].buftype == ""
+      and not vim.bo[b].filetype:match("^snacks_") and vim.bo[b].filetype ~= "vscode_scm"
+  end
+  local cur, prev = vim.api.nvim_get_current_win(), vim.fn.win_getid(vim.fn.winnr("#"))
+  for _, w in ipairs({ cur, prev }) do
+    if w ~= 0 and vim.api.nvim_win_is_valid(w) and is_editor(w) then
+      return w
+    end
+  end
+  for _, w in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    if is_editor(w) then
+      return w
+    end
+  end
+end
+local function new_file()
+  local win = editor_win()
+  if win then
+    vim.api.nvim_set_current_win(win)
+  elseif vim.bo.buftype == "terminal" or vim.api.nvim_win_get_config(0).relative ~= "" then
+    vim.cmd("topleft vnew") -- only panels open: a code area next to them
+  end
   vim.cmd("enew")
   vim.cmd.startinsert()
+end
+map({ "n", "i", "v" }, "<C-n>", new_file, { desc = "New file" })
+map("t", "<C-n>", function()
+  vim.cmd.stopinsert() -- leave the terminal first, or it takes the typing mode back
+  vim.schedule(new_file)
 end, { desc = "New file" })
 map({ "n", "i" }, "<C-z>", "<cmd>undo<cr>", { desc = "Undo" })
 map({ "n", "i" }, "<C-S-z>", "<cmd>redo<cr>", { desc = "Redo" })
@@ -108,8 +156,13 @@ map({ "n", "i" }, "<A-Down>", function() vim.cmd("m .+1") vim.cmd("normal! ==") 
 map("v", "<A-Up>", ":m '<-2<cr>gv=gv", { desc = "Move selection up", silent = true })
 map("v", "<A-Down>", ":m '>+1<cr>gv=gv", { desc = "Move selection down", silent = true })
 map({ "n", "i" }, "<S-A-Down>", "<cmd>t.<cr>", { desc = "Duplicate line" })
-map("v", "<Tab>", ">gv", { desc = "Indent" })
-map("v", "<S-Tab>", "<gv", { desc = "Outdent" })
+map("x", "<Tab>", ">gv", { desc = "Indent" })
+map("x", "<S-Tab>", "<gv", { desc = "Outdent" })
+-- a Shift+arrows selection (Select mode): switch to Visual for the indent and back
+map("s", "<Tab>", "<C-g>>gv<C-g>", { desc = "Indent" })
+map("s", "<S-Tab>", "<C-g><gv<C-g>", { desc = "Outdent" })
+-- Shift+Tab while typing moves the line one level left (Tab already indents)
+map("i", "<S-Tab>", "<C-d>", { desc = "Outdent" })
 
 -- Code (LSP)
 map(ANY, "<S-A-f>", function() LazyVim.format({ force = true }) end, { desc = "Format document" })
