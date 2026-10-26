@@ -657,6 +657,7 @@ function M.open(opts)
   vim.bo[state.buf].bufhidden = "wipe"
   local height = math.max(8, math.floor(vim.api.nvim_win_get_height(anchor) * 0.45))
   state.win = vim.api.nvim_open_win(state.buf, true, { split = "below", win = anchor, height = height })
+  vim.w[state.win].vscode_scm_main = true -- a split of it would not have this (tabs.lua)
   for opt, val in pairs({ number = false, relativenumber = false, signcolumn = "no", wrap = false,
     cursorline = true, winfixheight = true, winfixwidth = true, statuscolumn = "", foldcolumn = "0" }) do
     vim.wo[state.win][opt] = val

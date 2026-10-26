@@ -144,6 +144,60 @@ vim.api.nvim_create_autocmd({ "WinClosed", "BufWinLeave" }, {
   end,
 })
 
+-- Ctrl+` like VS Code: shows or hides THE terminal panel from anywhere. Snacks finds
+-- "its" terminal by the folder of the current panel, so from the explorer or Claude's
+-- terminal it made a new one (another split) instead of showing or hiding it.
+-- Focused terminal: hide. Shown but not focused: focus. Hidden: show. None: open.
+-- Claude's terminal is not this one (it has its own command).
+function M.toggle_terminal()
+  local shells = vim.tbl_filter(function(t)
+    local info = t.buf and vim.api.nvim_buf_is_valid(t.buf) and vim.b[t.buf].snacks_terminal
+    return info and info.cmd == nil
+  end, Snacks.terminal.list())
+  local cur = vim.api.nvim_get_current_buf()
+  local shown = vim.tbl_filter(function(t) return t:win_valid() end, shells)
+  for _, t in ipairs(shown) do
+    if t.buf == cur then
+      for _, s in ipairs(shown) do
+        s:hide()
+      end
+      local code = editor_wins()[1] -- back to the code, like VS Code
+      if code then
+        vim.api.nvim_set_current_win(code)
+      end
+      return
+    end
+  end
+  if shown[1] then
+    return shown[1]:focus()
+  end
+  local last = shells[#shells]
+  if last then
+    last:show()
+    return last:focus()
+  end
+  Snacks.terminal.open(nil, { cwd = vim.fn.getcwd(-1) })
+end
+
+-- A split made while the explorer or the Git panel had the focus copies that panel
+-- (several explorers side by side). Copies never carry the window marks Snacks and
+-- the Git panel put on their own windows, so they close right away.
+local PANEL_MARK = { snacks_picker_list = "snacks_win", snacks_picker_input = "snacks_win",
+  snacks_layout_box = "snacks_win", vscode_scm = "vscode_scm_main" }
+vim.api.nvim_create_autocmd("WinNew", {
+  group = vim.api.nvim_create_augroup("vscode_no_panel_copies", { clear = true }),
+  callback = function()
+    vim.schedule(function()
+      for _, w in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+        local mark = PANEL_MARK[vim.bo[vim.api.nvim_win_get_buf(w)].filetype]
+        if mark and vim.api.nvim_win_get_config(w).relative == "" and vim.w[w][mark] == nil then
+          pcall(vim.api.nvim_win_close, w, true)
+        end
+      end
+    end)
+  end,
+})
+
 -- right click on a tab
 local function listed()
   return vim.tbl_filter(function(b) return vim.bo[b].buflisted end, vim.api.nvim_list_bufs())

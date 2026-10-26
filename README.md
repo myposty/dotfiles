@@ -36,7 +36,7 @@ Running it again is safe. Tested on Windows 11 and a clean Debian 12.
 
 Run `:Copilot auth` once inside `nvim` to enable AI suggestions.
 
-**Updates:** a few seconds after nvim starts it checks GitHub in the background; when this repo has new commits it asks to update (fast-forward only, local edits are never overwritten). `:DotfilesUpdate` does it on demand. Works on Windows, macOS and Linux.
+**Updates:** nvim checks GitHub in the background when it starts and every 30 minutes. When this repo has new commits it shows a notice and keeps a blue **Update** button in the status bar; clicking it asks to update now (fast-forward only, local edits are never overwritten), then nvim restarts in the same place. `:DotfilesUpdate` does it on demand. Works on Windows, macOS and Linux.
 
 ## Shortcuts
 

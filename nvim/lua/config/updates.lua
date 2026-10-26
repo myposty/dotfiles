@@ -1,7 +1,7 @@
--- Updates for the dotfiles repository. On start it fetches in the background
--- (never blocks) and, when GitHub has newer commits, pulls them. Works the
--- same on Windows, macOS and Linux: it only needs git.
--- :DotfilesUpdate updates on demand.
+-- Updates for the dotfiles repository. It fetches in the background (never blocks)
+-- on start and every 30 minutes; when GitHub has newer commits it says so and keeps
+-- an "Update" badge in the status bar until the user installs them. Works the same
+-- on Windows, macOS and Linux: it only needs git. :DotfilesUpdate updates on demand.
 local M = {}
 
 -- The nvim config is a link into the repo (dotfiles/nvim); its real path finds the repo
@@ -155,11 +155,41 @@ function M.apply(repo, done)
   end)
 end
 
+-- new commits waiting on GitHub (0 = up to date); the status bar shows a badge for it
+M.available = 0
+
+function M.badge()
+  return M.available == 1 and "󰚰 Update" or ("󰚰 Update (" .. M.available .. ")")
+end
+
 function M.prompt(count, repo)
+  count = count or M.available
   local what = count == 1 and "1 new update" or (count .. " new updates")
   vim.ui.select({ "Update now", "Later" }, { prompt = "Dotfiles: " .. what .. " available" }, function(choice)
     if choice == "Update now" then
-      M.apply(repo)
+      M.apply(repo, function(ok)
+        if ok then
+          M.available = 0
+          pcall(function() require("lualine").refresh({ place = { "statusline" } }) end)
+          vim.cmd("redrawstatus!")
+        end
+      end)
+    end
+  end)
+end
+
+-- Looks for updates and, when there are new ones, says so once and keeps the badge
+local told = 0
+local function look()
+  M.check(function(count, repo)
+    M.available = count
+    pcall(function() require("lualine").refresh({ place = { "statusline" } }) end)
+    vim.cmd("redrawstatus!")
+    if count > told then
+      told = count
+      vim.notify(("%s on GitHub. Click 󰚰 Update in the bottom bar (or run :DotfilesUpdate) to install it."):format(
+        count == 1 and "A dotfiles update is available" or (count .. " dotfiles updates are available")),
+        vim.log.levels.INFO, { title = "Dotfiles", timeout = 15000 })
     end
   end)
 end
@@ -174,17 +204,15 @@ vim.api.nvim_create_user_command("DotfilesUpdate", function()
   end)
 end, { desc = "Update the dotfiles from GitHub" })
 
--- Background update a few seconds after start (only with a screen, never in headless
--- runs): new commits are pulled without asking (fast-forward only, local edits are
--- never touched) and apply the next time nvim opens
+-- Looks for updates in the background a few seconds after start and every 30 minutes
+-- while nvim stays open (only with a screen, never in headless runs). Nothing is
+-- installed without asking: the user sees the notice and the badge and chooses when.
 if #vim.api.nvim_list_uis() > 0 then
-  vim.defer_fn(function()
-    M.check(function(count, repo)
-      if count > 0 then
-        M.apply(repo)
-      end
-    end)
-  end, 3000)
+  vim.defer_fn(look, 3000)
+  local timer = vim.uv.new_timer()
+  if timer then
+    timer:start(30 * 60 * 1000, 30 * 60 * 1000, vim.schedule_wrap(look))
+  end
 end
 
 return M

@@ -174,17 +174,30 @@ map(ANY, "<F8>", function() vim.diagnostic.jump({ count = 1, float = true }) end
 map(ANY, "<C-S-m>", function() Snacks.picker.diagnostics() end, { desc = "Problems panel" })
 
 -- Terminal (Ctrl+` or Ctrl+J like VS Code; Ctrl+Shift+` opens a new one)
-map({ "n", "i", "v", "t" }, "<C-`>", function() Snacks.terminal() end, { desc = "Toggle terminal" })
-map(ANY, "<C-j>", function() Snacks.terminal() end, { desc = "Toggle terminal" })
+map({ "n", "i", "v", "t" }, "<C-`>", function() require("config.tabs").toggle_terminal() end, { desc = "Toggle terminal" })
+map(ANY, "<C-j>", function() require("config.tabs").toggle_terminal() end, { desc = "Toggle terminal" })
 -- inside a terminal too, except Claude, which uses Ctrl+J for a new line
 map("t", "<C-j>", function()
   if vim.api.nvim_buf_get_name(0):lower():find("claude") then
     return "<C-j>"
   end
-  vim.schedule(function() Snacks.terminal() end)
+  vim.schedule(function() require("config.tabs").toggle_terminal() end)
   return ""
 end, { expr = true, desc = "Toggle terminal" })
-map({ "n", "i", "v", "t" }, "<C-S-`>", function() Snacks.terminal.open() end, { desc = "New terminal" })
+-- Shift+Enter: a new line, like VS Code. In Claude's terminal it is a line break in
+-- the message (Claude reads Ctrl+J as one) instead of sending it; other terminals
+-- get a plain Enter. Windows Terminal sends it as its own key (nvim-keys.json).
+map("i", "<S-CR>", "<CR>", { desc = "New line" })
+map("t", "<S-CR>", function()
+  local job = vim.b.terminal_job_id
+  if job then
+    local info = vim.b.snacks_terminal
+    local claude = (info and info.cmd and tostring(info.cmd):lower():find("claude"))
+      or vim.api.nvim_buf_get_name(0):lower():find("claude")
+    vim.api.nvim_chan_send(job, claude and "\n" or "\r")
+  end
+end, { desc = "New line" })
+map({ "n", "i", "v", "t" }, "<C-S-`>", function() Snacks.terminal.open(nil, { cwd = vim.fn.getcwd(-1) }) end, { desc = "New terminal" })
 
 -- More VS Code shortcuts (same keys on Windows / Linux with Ctrl, on Mac with Cmd)
 map(ANY, "<C-g>", function()
@@ -223,7 +236,22 @@ map("n", "<C-S-CR>", "O", { desc = "New line above" })
 map("i", "<C-CR>", "<C-o>o", { desc = "New line below" })
 map("i", "<C-S-CR>", "<C-o>O", { desc = "New line above" })
 
-map(ANY, "<C-\\>", "<cmd>vsplit<cr>", { desc = "Split editor" })
+-- Splits always split the code area, like VS Code: from the explorer, the Git panel or
+-- a terminal they used to copy that panel instead
+local function split_editor(cmd)
+  return function()
+    local win = editor_win()
+    if not win then
+      return
+    end
+    vim.cmd.stopinsert()
+    vim.api.nvim_set_current_win(win)
+    vim.cmd(cmd)
+  end
+end
+map(ANY, "<C-\\>", split_editor("vsplit"), { desc = "Split editor" })
+map("n", "<leader>|", split_editor("vsplit"), { desc = "Split right" })
+map("n", "<leader>-", split_editor("split"), { desc = "Split below" })
 
 -- Ctrl+1/2/3 focus editor 1/2/3 (left to right), Ctrl+0 the file explorer
 local function editors()

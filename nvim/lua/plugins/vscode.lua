@@ -593,6 +593,16 @@ return {
           })
         end
       end
+      -- "⬆ Update" stays in the bar while the dotfiles have an update, like VS Code's
+      -- update badge; a click asks to update now (lua/config/updates.lua)
+      opts.sections = opts.sections or {}
+      opts.sections.lualine_x = opts.sections.lualine_x or {}
+      table.insert(opts.sections.lualine_x, 1, {
+        function() return require("config.updates").badge() end,
+        cond = function() return require("config.updates").available > 0 end,
+        color = { fg = "#ffffff", bg = "#0078d4", gui = "bold" },
+        on_click = function() require("config.updates").prompt() end,
+      })
     end,
   },
 
