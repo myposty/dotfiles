@@ -51,6 +51,7 @@ local function metrics(win)
   return {
     total = vim.api.nvim_buf_line_count(buf), top = vim.fn.line("w0", win), height = vim.api.nvim_win_get_height(win),
     scroll = function(top)
+      vim.w[win].term_user_scrolled = true -- the user is reading history (autocmds.lua)
       vim.api.nvim_win_call(win, function()
         vim.fn.winrestview({ topline = top, lnum = top })
       end)
@@ -77,6 +78,10 @@ local function draw(win, m)
   local pos = math.min(height - size, math.floor((m.top - 1) * height / m.total + 0.5))
 
   local bar = bars[win]
+  local key = table.concat({ height, width, size, pos }, ":")
+  if bar and vim.api.nvim_win_is_valid(bar.win) and bar.key == key then
+    return -- nothing moved: redrawing anyway made the panel under it flicker
+  end
   if not bar or not vim.api.nvim_win_is_valid(bar.win) then
     local bbuf = vim.api.nvim_create_buf(false, true)
     vim.bo[bbuf].bufhidden = "wipe"
@@ -100,6 +105,7 @@ local function draw(win, m)
   for row = pos, pos + size - 1 do
     vim.api.nvim_buf_set_extmark(bar.buf, ns, row, 0, { end_col = 1, hl_group = "ScrollbarThumb" })
   end
+  bar.key = key
 end
 
 function M.refresh()

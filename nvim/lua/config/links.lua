@@ -1,5 +1,5 @@
 -- Clickable file paths in terminals (Claude, shell), like links in the VS Code terminal.
--- Clicking a line that names a file opens it in the editor. Paths may be relative to the
+-- Double-clicking (or Ctrl+clicking) a line that names a file opens it in the editor. Paths may be relative to the
 -- current folder, use \ or /, end in :line, or be shortened by Claude with "…"
 -- (ElSegundoSilbido\doc…\notes.md). Clicking a numbered line of a diff that Claude
 -- shows under Update(file) / Write(file) opens that file at that line.
@@ -131,8 +131,12 @@ local function open(path, lnum)
     pcall(vim.api.nvim_win_set_cursor, win, { math.min(lnum, vim.api.nvim_buf_line_count(0)), 0 })
     vim.cmd("normal! zz")
   end
-  -- ready to type, like any file (the terminal click may end in normal mode)
+  -- ready to type, like any file (the terminal click may end in normal mode, or the
+  -- end of a double click may select a word in the opened file)
   vim.defer_fn(function()
+    if vim.fn.mode():find("^[vV\22]") then
+      vim.cmd('exe "normal! \\<Esc>"')
+    end
     if vim.fn.mode() == "n" and vim.bo.buftype == "" and vim.bo.modifiable then
       vim.cmd.startinsert()
     end

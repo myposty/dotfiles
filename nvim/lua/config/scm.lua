@@ -43,7 +43,9 @@ local function root()
 end
 
 local function git(args, on_done)
-  local cmd = { "git", "-C", root() or vim.fn.getcwd() }
+  -- --no-optional-locks: polling `git status` must not rewrite .git/index, or the
+  -- explorer (which watches .git) redraws every 2 s and looks like it is moving
+  local cmd = { "git", "--no-optional-locks", "-C", root() or vim.fn.getcwd() }
   vim.list_extend(cmd, args)
   vim.system(cmd, { text = true }, function(res)
     vim.schedule(function()

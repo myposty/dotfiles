@@ -35,7 +35,7 @@ M.list = {
   { keys = "Ctrl+Shift+V / Ctrl+K V", alt = "Alt+V / Ctrl+K V", desc = "Markdown: preview / edit (or click Preview at the top right)", run = function() vim.cmd("MarkdownPreview") end },
   { keys = "Ctrl+V / Ctrl+Shift+V in Claude", desc = "Paste the copied image (or text) into Claude" },
   { keys = "Open an image file", desc = "Preview it (WezTerm, kitty, ghostty) or open it in the system viewer" },
-  { keys = "Click a file path in Claude", desc = "Open it in the editor (diff lines open at that line)" },
+  { keys = "Double-click a file path in Claude", desc = "Open it in the editor (diff lines open at that line)" },
   { keys = "Alt+Z", desc = "Toggle word wrap", run = function() vim.wo.wrap = not vim.wo.wrap end },
   { keys = "F3 / Shift+F3", desc = "Next / previous search match" },
   { keys = "Ctrl+,", alt = "Alt+,", desc = "Settings", run = function() require("config.shortcuts").settings() end },

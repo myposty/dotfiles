@@ -27,13 +27,36 @@ vim.api.nvim_create_autocmd({ "BufEnter", "WinEnter" }, {
   end,
 })
 
--- A terminal scrolled up to read its history: getting ready to type would jump to
--- the bottom, so clicks and focus leave it where it is (like VS Code)
+-- A terminal the user scrolled up (mouse wheel or its scrollbar) to read its history:
+-- getting ready to type would jump to the bottom, so clicks and focus leave it where
+-- it is (like VS Code). Only a scroll by the user counts: Claude redrawing its screen
+-- also leaves lines below the view for a moment, and taking that for a scroll threw
+-- the view back up and left Claude unable to type.
 local function terminal_scrolled_up(win)
-  win = win or 0
+  win = win or vim.api.nvim_get_current_win()
   local buf = vim.api.nvim_win_get_buf(win)
-  return vim.bo[buf].buftype == "terminal" and vim.fn.line("w$", win) < vim.api.nvim_buf_line_count(buf)
+  if vim.bo[buf].buftype ~= "terminal" or not vim.w[win].term_user_scrolled then
+    return false
+  end
+  if vim.fn.line("w$", win) >= vim.api.nvim_buf_line_count(buf) then
+    vim.w[win].term_user_scrolled = nil -- back at the bottom
+    return false
+  end
+  return true
 end
+local wheel_up = vim.keycode("<ScrollWheelUp>")
+vim.on_key(function(_, typed)
+  if typed == wheel_up then
+    local pos = vim.fn.getmousepos()
+    if pos.winid ~= 0 and vim.bo[vim.api.nvim_win_get_buf(pos.winid)].buftype == "terminal" then
+      vim.w[pos.winid].term_user_scrolled = true
+    end
+  end
+end, vim.api.nvim_create_namespace("vscode_terminal_wheel"))
+-- typing again in the terminal means it follows the output again
+vim.api.nvim_create_autocmd("TermEnter", {
+  callback = function() vim.w.term_user_scrolled = nil end,
+})
 
 -- Terminals (Claude, shell) are ready to type whenever they get focus, like VS Code
 local term_focus = vim.api.nvim_create_augroup("vscode_terminal_focus", { clear = true })
@@ -209,10 +232,7 @@ vim.keymap.set("t", "<LeftMouse>", function()
     drag = divider
     return ""
   end
-  -- a file path (or a numbered diff line) under the click opens in the editor
-  if require("config.links").open_at(pos) then
-    return ""
-  end
+  -- (file paths open with a double click or Ctrl+click, never a single one: see TermOpen)
   if info and pos.winid ~= vim.api.nvim_get_current_win() then
     -- the release of this click lands in the new panel: it must not count as the
     -- end of a drag there (that left the explorer or a file in visual mode)
@@ -285,12 +305,7 @@ vim.on_key(function(_, typed)
       end)
     end
   elseif typed == left_release then
-    local pos = vim.fn.getmousepos()
     vim.schedule(function()
-      -- a click on a file path in a terminal that was not focused opens the file
-      if vim.fn.mode() == "n" and require("config.links").open_at(pos) then
-        return
-      end
       fix_side_panels()
       local buf = vim.api.nvim_get_current_buf()
       local typable = vim.bo[buf].buftype == "terminal" or is_file_buffer(buf)
@@ -326,10 +341,17 @@ vim.api.nvim_create_autocmd("TermOpen", {
     for _, key in ipairs(vim.list_extend(vim.deepcopy(keys), { "<C-x>", "<C-z>", "<C-y>", "<Del>", "<Tab>", "<S-Tab>" })) do
       vim.keymap.set("x", key, "<Esc>i" .. key, { buffer = ev.buf, nowait = true })
     end
-    -- Ctrl+click opens a link like in VS Code (Vim would look for a "tag" there)
-    vim.keymap.set({ "n", "t", "x" }, "<C-LeftMouse>", function()
-      require("config.links").open_at(vim.fn.getmousepos())
-    end, { buffer = ev.buf })
+    -- A file path opens with a double click or Ctrl+click (VS Code's Ctrl+click; Vim
+    -- would look for a "tag" there). A single click only puts the focus here: it used
+    -- to open whatever file was under it, taking the focus away from Claude.
+    for _, key in ipairs({ "<C-LeftMouse>", "<2-LeftMouse>" }) do
+      vim.keymap.set({ "n", "t", "x" }, key, function()
+        if require("config.links").open_at(vim.fn.getmousepos()) then
+          -- the release lands in the opened file: not a drag selection there
+          vim.g.vscode_swallow_release = vim.uv.now()
+        end
+      end, { buffer = ev.buf })
+    end
   end,
 })
 
