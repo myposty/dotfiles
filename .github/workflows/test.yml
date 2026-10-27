@@ -10,10 +10,11 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - uses: rhysd/action-setup-vim@v1
-        with:
-          neovim: true
-          version: stable
+      # rhysd/action-setup-vim breaks on this runner (EXDEV moving across /tmp): plain download
+      - name: Install Neovim
+        run: |
+          curl -fsSL https://github.com/neovim/neovim/releases/download/stable/nvim-linux-x86_64.tar.gz | tar -xz -C "$HOME"
+          echo "$HOME/nvim-linux-x86_64/bin" >> "$GITHUB_PATH"
       - name: install.sh syntax
         run: bash -n install.sh
       - name: install.ps1 syntax

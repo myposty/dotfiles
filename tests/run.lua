@@ -605,7 +605,7 @@ local commands_run, keymaps_run, keys_fed = 0, 0, 0
 
 local function recorder(name)
   local function f() H[name] = H[name] + 1 end
-  return setmetatable({ open = f, toggle = f, get = function() end }, { __call = f })
+  return setmetatable({ open = f, toggle = f, get = function() end, list = function() return {} end }, { __call = f })
 end
 Snacks.terminal = recorder("terminal")
 Snacks.lazygit = recorder("lazygit")
