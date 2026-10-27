@@ -377,15 +377,16 @@ return {
                 keys = {
                   ["<c-b>"] = "close",
                   ["<c-s-e>"] = "close",
-                  -- like VS Code's New File / New Folder buttons, inside the selected folder
-                  -- (a: new file or folder/, r rename, d delete, c copy, m move)
-                  ["<c-n>"] = "explorer_add",
+                  -- Ctrl+N: an unsaved new file in the code area, like VS Code (a / A:
+                  -- new file or folder inside the selected folder; r rename, d delete...)
+                  ["<c-n>"] = { function() vim.cmd.stopinsert() vim.schedule(_G.VSCodeNewFile) end, mode = { "n", "i" } },
                   ["A"] = "explorer_new_folder",
                   -- Esc goes back to the editor and leaves the explorer open (VS Code)
                   ["<esc>"] = "explorer_to_editor",
                 },
               },
-              input = { keys = { ["<c-b>"] = { "close", mode = { "n", "i" } }, ["<c-s-e>"] = { "close", mode = { "n", "i" } } } },
+              input = { keys = { ["<c-b>"] = { "close", mode = { "n", "i" } }, ["<c-s-e>"] = { "close", mode = { "n", "i" } },
+                ["<c-n>"] = { function() vim.cmd.stopinsert() vim.schedule(_G.VSCodeNewFile) end, mode = { "n", "i" } } } },
             },
           },
           -- an empty list still opens (a new machine has no recent files yet):

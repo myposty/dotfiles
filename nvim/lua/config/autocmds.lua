@@ -438,6 +438,7 @@ local function show_start_screen()
     local buf = vim.api.nvim_win_get_buf(win)
     local empty = vim.api.nvim_buf_get_name(buf) == "" and vim.bo[buf].buftype == ""
       and vim.bo[buf].filetype == "" and not vim.bo[buf].modified
+      and not vim.b[buf].vscode_new_file -- Ctrl+N's untitled file is not "nothing open"
       and vim.api.nvim_buf_line_count(buf) == 1 and vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1] == ""
     if empty and vim.api.nvim_win_get_config(win).relative == "" then
       Snacks.dashboard({ win = win, buf = buf })

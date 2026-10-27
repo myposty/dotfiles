@@ -119,15 +119,22 @@ function editor_win()
   end
 end
 local function new_file()
-  local win = editor_win()
+  -- the start screen counts as the code area: the new file takes its place
+  -- instead of opening squeezed next to it
+  local dash = vim.tbl_filter(function(w)
+    return vim.bo[vim.api.nvim_win_get_buf(w)].filetype == "snacks_dashboard"
+  end, vim.api.nvim_tabpage_list_wins(0))[1]
+  local win = editor_win() or dash
   if win then
     vim.api.nvim_set_current_win(win)
   elseif vim.bo.buftype == "terminal" or vim.api.nvim_win_get_config(0).relative ~= "" then
     vim.cmd("topleft vnew") -- only panels open: a code area next to them
   end
   vim.cmd("enew")
+  vim.b.vscode_new_file = true -- the start screen leaves it alone
   vim.cmd.startinsert()
 end
+_G.VSCodeNewFile = new_file
 map({ "n", "i", "v" }, "<C-n>", new_file, { desc = "New file" })
 map("t", "<C-n>", function()
   vim.cmd.stopinsert() -- leave the terminal first, or it takes the typing mode back
