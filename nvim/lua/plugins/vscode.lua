@@ -679,7 +679,7 @@ return {
       terminal = { split_side = "right", split_width_percentage = 0.38 },
     },
     keys = {
-      -- continues the folder's latest conversation (lua/config/claude.lua)
+      -- asks: continue the folder's latest conversation or start a new one (lua/config/claude.lua)
       { "<C-S-a>", function() require("config.claude").focus() end, mode = { "n", "i", "t" }, desc = "Claude Code" },
       { "<C-A-k>", "<cmd>ClaudeCodeSend<cr>", mode = "v", desc = "Send selection to Claude" },
       { "<C-A-k>", "<cmd>ClaudeCodeAdd %<cr>", mode = { "n", "i" }, desc = "Send file to Claude" },

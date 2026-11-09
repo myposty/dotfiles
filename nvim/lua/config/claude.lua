@@ -1,6 +1,6 @@
 -- Claude Code keeps working on the same conversation, like the VS Code extension:
--- opening Claude in a folder where it was used before continues the latest
--- conversation instead of starting a new one each time. Alt+Shift+C (or
+-- opening Claude in a folder where it was used before asks whether to continue the
+-- latest conversation (shown by name) or start a new one. Alt+Shift+C (or
 -- :ClaudeSessions) lists the folder's past conversations by name to pick one.
 --
 -- Conversations are always reopened by their id (claude --resume <id>). Claude's own
@@ -82,16 +82,6 @@ local function open_with(args)
   vim.cmd("ClaudeCodeFocus " .. args)
 end
 
--- Show / focus Claude; started here for the first time, it reopens the folder's
--- latest conversation (a new one only when there is none)
-function M.focus()
-  if running() then
-    return open_with("")
-  end
-  local last = M.list()[1]
-  open_with(last and ("--resume " .. last.id) or "")
-end
-
 local function ago(sec)
   local d = os.time() - sec
   if d < 3600 then
@@ -100,6 +90,39 @@ local function ago(sec)
     return math.floor(d / 3600) .. " h ago"
   end
   return os.date("%d/%m/%Y", sec)
+end
+
+-- Show / focus Claude. Started here for the first time in a folder with past
+-- conversations, it asks: continue the latest one (by name), start a new one, or
+-- pick another
+function M.focus()
+  if running() then
+    return open_with("")
+  end
+  local list = M.list()
+  local last = list[1]
+  if not last then
+    return open_with("")
+  end
+  local choices = {
+    { label = ('Continue: "%s"  (%s)'):format(title_of(last.path), ago(last.mtime)), args = "--resume " .. last.id },
+    { label = "New conversation", args = "" },
+  }
+  if #list > 1 then
+    choices[#choices + 1] = { label = "Other conversations…", other = true }
+  end
+  vim.ui.select(choices, {
+    prompt = "Claude Code",
+    format_item = function(c) return c.label end,
+  }, function(choice)
+    if not choice then
+      return
+    end
+    if choice.other then
+      return M.sessions()
+    end
+    open_with(choice.args)
+  end)
 end
 
 -- Pick one of this folder's conversations by name (type to search)
