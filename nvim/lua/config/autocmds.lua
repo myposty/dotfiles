@@ -232,8 +232,21 @@ vim.keymap.set("t", "<LeftMouse>", function()
     drag = divider
     return ""
   end
+  -- the panel's close button (config/closebtn.lua) in its top bar: terminal mode does
+  -- not run winbar buttons, so the click is checked here
+  if info and info.winbar == 1 and pos.screenrow == info.winrow
+    and require("config.closebtn").hit(pos.winid, pos.wincol) then
+    _G.VSCodeCloseButton(pos.winid)
+    return ""
+  end
   -- (file paths open with a double click or Ctrl+click, never a single one: see TermOpen)
-  if info and pos.winid ~= vim.api.nvim_get_current_win() then
+  local cur = vim.api.nvim_get_current_win()
+  if info and pos.winid ~= cur then
+    -- a floating terminal (lazygit) would stay on top covering everything: clicking
+    -- outside hides it, like a VS Code popup (it keeps running; its key brings it back)
+    if vim.api.nvim_win_get_config(cur).relative ~= "" then
+      vim.schedule(function() pcall(vim.api.nvim_win_hide, cur) end)
+    end
     -- the release of this click lands in the new panel: it must not count as the
     -- end of a drag there (that left the explorer or a file in visual mode)
     vim.g.vscode_swallow_release = vim.uv.now()
@@ -422,6 +435,27 @@ local function no_files_open()
     end
   end
   return true
+end
+
+-- Every start screen registers its autocmds in one augroup named "snacks_dashboard" and
+-- deletes it when closed, so with two open (one per tab) closing the second one failed
+-- with E367 'No such group: "--Deleted--"'. Give each start screen its own group.
+do
+  local dashboard = require("snacks.dashboard")
+  local open, count = dashboard.open, 0
+  dashboard.open = function(...)
+    local create = vim.api.nvim_create_augroup
+    count = count + 1
+    vim.api.nvim_create_augroup = function(name, opts)
+      return create(name == "snacks_dashboard" and name .. "_" .. count or name, opts)
+    end
+    local ok, res = pcall(open, ...)
+    vim.api.nvim_create_augroup = create
+    if not ok then
+      error(res, 0)
+    end
+    return res
+  end
 end
 
 local function show_start_screen()

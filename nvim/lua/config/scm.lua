@@ -32,12 +32,15 @@ local KEYS = {
   "q              close",
 }
 
-local root_cache = {}
+local root_cache, not_git = {}, {}
 local function root()
   local cwd = vim.fn.getcwd()
-  if not root_cache[cwd] then -- only found roots are kept: a `git init` shows up later
+  -- found roots are kept; a folder without git is asked again only after a while
+  -- (a `git init` shows up later), not on every window change
+  if not root_cache[cwd] and vim.uv.now() - (not_git[cwd] or -1e9) > 10000 then
     local out = vim.fn.systemlist({ "git", "-C", cwd, "rev-parse", "--show-toplevel" })
     root_cache[cwd] = vim.v.shell_error == 0 and out[1] or nil
+    not_git[cwd] = not root_cache[cwd] and vim.uv.now() or nil
   end
   return root_cache[cwd]
 end
@@ -626,11 +629,11 @@ local function map_keys(buf)
   vim.keymap.set("n", "r", M.refresh, o)
   vim.keymap.set("n", "g", function() Snacks.lazygit() end, o)
   vim.keymap.set("n", "?", function() vim.notify(table.concat(KEYS, "\n"), vim.log.levels.INFO, { title = "Git" }) end, o)
-  vim.keymap.set("n", "q", M.close, o)
+  vim.keymap.set("n", "q", function() M.close(true) end, o)
 end
 
-local function explorer_win()
-  for _, w in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+local function explorer_win(tab)
+  for _, w in ipairs(vim.api.nvim_tabpage_list_wins(tab or 0)) do
     local ft = vim.bo[vim.api.nvim_win_get_buf(w)].filetype
     if vim.api.nvim_win_get_config(w).relative == "" and (ft == "snacks_layout_box" or ft == "snacks_picker_list") then
       return w
@@ -653,12 +656,14 @@ function M.open(opts)
     Snacks.explorer.open()
     return vim.defer_fn(function() M.open(opts) end, 150)
   end
-  local previous = vim.api.nvim_get_current_win()
+  state.closed_by_user = nil
   state.buf = vim.api.nvim_create_buf(false, true)
   vim.bo[state.buf].filetype = FT
   vim.bo[state.buf].bufhidden = "wipe"
   local height = math.max(8, math.floor(vim.api.nvim_win_get_height(anchor) * 0.45))
-  state.win = vim.api.nvim_open_win(state.buf, true, { split = "below", win = anchor, height = height })
+  -- opened by itself (focus = false) it never takes the focus, not even for a moment:
+  -- that pulled Claude's terminal out of typing mode
+  state.win = vim.api.nvim_open_win(state.buf, focus, { split = "below", win = anchor, height = height })
   vim.w[state.win].vscode_scm_main = true -- a split of it would not have this (tabs.lua)
   for opt, val in pairs({ number = false, relativenumber = false, signcolumn = "no", wrap = false,
     cursorline = true, winfixheight = true, winfixwidth = true, statuscolumn = "", foldcolumn = "0" }) do
@@ -668,14 +673,14 @@ function M.open(opts)
   map_keys(state.buf)
   M.refresh()
   -- the explorer re-focuses itself while its layout settles; set the focus after it
-  vim.defer_fn(function()
-    if focus and valid() then
-      vim.api.nvim_set_current_win(state.win)
-      vim.cmd.stopinsert()
-    elseif not focus and vim.api.nvim_win_is_valid(previous) then
-      vim.api.nvim_set_current_win(previous)
-    end
-  end, 150)
+  if focus then
+    vim.defer_fn(function()
+      if valid() then
+        vim.api.nvim_set_current_win(state.win)
+        vim.cmd.stopinsert()
+      end
+    end, 150)
+  end
 
   -- real time: poll every 2 s while open, plus on save / focus / terminal close / folder change
   state.timer = vim.uv.new_timer()
@@ -700,41 +705,50 @@ function M.open(opts)
   })
 end
 
-function M.close()
+function M.close(by_user)
   if valid() then
+    state.closed_by_user = by_user == true or nil
     vim.api.nvim_win_close(state.win, true)
   end
 end
 
--- Like VS Code's sidebar: the panel shows up under the explorer whenever the
--- explorer opens inside a git repository, and closes together with it
+-- Like VS Code's sidebar: the panel is there whenever the explorer is (inside a git
+-- repository) and goes with it. It used to close for good when the explorer was
+-- missing for a moment (redrawing, or a diff opened in another tab) and came back
+-- only when the explorer was opened again.
+local pending
+local function sync()
+  if pending then
+    return
+  end
+  pending = true
+  vim.defer_fn(function()
+    pending = false
+    if valid() then
+      local tab = vim.api.nvim_win_get_tabpage(state.win)
+      if not explorer_win(tab) then
+        M.close()
+      end
+    elseif not state.closed_by_user and explorer_win() and root() then
+      M.open({ focus = false })
+    end
+  end, 300)
+end
 local auto = vim.api.nvim_create_augroup("vscode_scm_auto", { clear = true })
 vim.api.nvim_create_autocmd("FileType", {
   group = auto,
   pattern = "snacks_picker_list",
   callback = function()
-    vim.defer_fn(function()
-      if not valid() and explorer_win() and root() then
-        M.open({ focus = false })
-      end
-    end, 200)
+    state.closed_by_user = nil -- the explorer opened again: so does the panel
+    sync()
   end,
 })
-vim.api.nvim_create_autocmd("WinClosed", {
-  group = auto,
-  callback = function()
-    vim.defer_fn(function()
-      if valid() and not explorer_win() then
-        M.close()
-      end
-    end, 50)
-  end,
-})
+vim.api.nvim_create_autocmd({ "WinClosed", "WinNew", "TabEnter" }, { group = auto, callback = sync })
 
 function M.toggle()
   if valid() then
     if vim.api.nvim_get_current_win() == state.win then
-      M.close()
+      M.close(true)
     else
       vim.api.nvim_set_current_win(state.win)
     end

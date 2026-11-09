@@ -6,7 +6,9 @@ local ROWS = { folder = 2, name = 2, logo = 8, startup = 1, git_min = 4 }
 local DROP_FIRST = { "n", "l", "k", "r", ",", "s", "p", "e", "g", "c", "f", "o" }
 
 local function start_screen_layout(self)
-  local rows = self._size and self._size.height or vim.o.lines
+  -- the real window height: Snacks' _size adds the status line, which is not ours to fill
+  local rows = self.win and vim.api.nvim_win_is_valid(self.win) and vim.api.nvim_win_get_height(self.win)
+    or (self._size and self._size.height) or vim.o.lines
   local keys = require("config.shortcuts").dashboard_keys()
   local layout = { keys = keys }
   local free = rows - (#keys + 1) - 1 -- shortcuts + bottom padding, and Snacks' last line
@@ -228,6 +230,15 @@ return {
     opts = {
       -- Images where the terminal speaks the kitty graphics protocol (WezTerm, kitty, ghostty)
       image = { enabled = true, doc = { enabled = true, inline = false, float = true } },
+      -- Smooth scrolling only in files. In the explorer and the Git panel it animated
+      -- every redraw (Claude editing files, a panel opening or closing): the tree slid
+      -- around, and each animation step briefly switched the mode shown in the status
+      -- bar (TERMINAL / NORMAL flashing while typing to Claude).
+      scroll = {
+        filter = function(buf)
+          return vim.g.snacks_scroll ~= false and vim.b[buf].snacks_scroll ~= false and vim.bo[buf].buftype == ""
+        end,
+      },
       -- Start screen: the user's name as logo (lua/config/logo.lua) and VS Code shortcuts (lua/config/shortcuts.lua)
       dashboard = {
         preset = {
@@ -668,7 +679,8 @@ return {
       terminal = { split_side = "right", split_width_percentage = 0.38 },
     },
     keys = {
-      { "<C-S-a>", "<cmd>ClaudeCodeFocus<cr>", mode = { "n", "i", "t" }, desc = "Claude Code" },
+      -- continues the folder's latest conversation (lua/config/claude.lua)
+      { "<C-S-a>", function() require("config.claude").focus() end, mode = { "n", "i", "t" }, desc = "Claude Code" },
       { "<C-A-k>", "<cmd>ClaudeCodeSend<cr>", mode = "v", desc = "Send selection to Claude" },
       { "<C-A-k>", "<cmd>ClaudeCodeAdd %<cr>", mode = { "n", "i" }, desc = "Send file to Claude" },
     },

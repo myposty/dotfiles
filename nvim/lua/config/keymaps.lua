@@ -24,7 +24,8 @@ map({ "n", "i" }, "<C-f>", function() vim.cmd.stopinsert() vim.api.nvim_feedkeys
 map(ANY, "<C-b>", function() Snacks.explorer() end, { desc = "Toggle explorer" })
 -- Works inside Claude and terminals too, where Ctrl+B belongs to the app
 map({ "n", "i", "v", "t" }, "<C-S-e>", function() Snacks.explorer() end, { desc = "Toggle explorer" })
-map(ANY, "<C-S-g>", function() Snacks.lazygit() end, { desc = "Git (lazygit)" })
+-- also from a terminal: inside lazygit the same key hides it again (Snacks toggles)
+map({ "n", "i", "v", "t" }, "<C-S-g>", function() Snacks.lazygit() end, { desc = "Git (lazygit)" })
 map("n", "<C-k><C-o>", function() Snacks.picker.projects() end, { desc = "Open folder" })
 map(ANY, "<C-S-o>", function() Snacks.picker.projects() end, { desc = "Open folder" })
 map(ANY, "<C-S-k>", function() require("config.folders").open() end, { desc = "Browse folders" })
@@ -321,11 +322,11 @@ map(ANY, "<A-o>", function() Snacks.picker.projects() end, { desc = "Open folder
 -- replaces LazyVim's Alt+K "move line up" (Alt+Up / Alt+Down still move lines)
 map(ANY, "<A-k>", function() require("config.folders").open() end, { desc = "Browse folders" })
 map(ANY, "<A-r>", function() Snacks.picker.recent() end, { desc = "Open recent file" })
-map(ANY_T, "<A-c>", function()
-  require("lazy").load({ plugins = { "claudecode.nvim" } })
-  vim.cmd("ClaudeCodeFocus")
-end, { desc = "Claude Code" })
-map(ANY, "<A-g>", function() Snacks.lazygit() end, { desc = "Git (lazygit)" })
+map(ANY_T, "<A-c>", function() require("config.claude").focus() end, { desc = "Claude Code" })
+-- Claude's past conversations of this folder, searchable by name
+map(ANY_T, "<A-C>", function() require("config.claude").sessions() end, { desc = "Claude: past conversations" })
+require("config.claude") -- :ClaudeSessions
+map(ANY_T, "<A-g>", function() Snacks.lazygit() end, { desc = "Git (lazygit)" }) -- inside lazygit: hides it
 map(ANY_T, "<A-e>", function() Snacks.explorer() end, { desc = "Toggle explorer" })
 map(ANY, "<A-m>", function() Snacks.picker.diagnostics() end, { desc = "Problems panel" })
 map(ANY, "<A-h>", function() replace(false) end, { desc = "Replace in project" })

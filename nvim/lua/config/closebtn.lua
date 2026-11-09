@@ -12,7 +12,9 @@ function _G.VSCodeCloseButton(win)
     if not vim.api.nvim_win_is_valid(win) then
       return
     end
-    if #vim.tbl_filter(function(w) return vim.api.nvim_win_get_config(w).relative == "" end,
+    if vim.api.nvim_win_get_config(win).relative ~= "" then
+      pcall(vim.api.nvim_win_hide, win) -- a floating terminal (lazygit): hidden, still running
+    elseif #vim.tbl_filter(function(w) return vim.api.nvim_win_get_config(w).relative == "" end,
         vim.api.nvim_tabpage_list_wins(0)) > 1 then
       pcall(vim.api.nvim_win_close, win, true)
     else
@@ -21,10 +23,29 @@ function _G.VSCodeCloseButton(win)
   end)
 end
 
+-- Whether column `col` (1-based, inside the window) is on the window's close button.
+-- Terminal mode does not run winbar buttons, so clicks there are checked with this.
+function M.hit(win, col)
+  local bar = vim.wo[win].winbar
+  if not bar:find("VSCodeCloseButton", 1, true) then
+    return false
+  end
+  local r = vim.api.nvim_eval_statusline(bar, { winid = win, use_winbar = true, highlights = true })
+  for _, h in ipairs(r.highlights) do
+    if h.group == "VSCodeCloseButton" then
+      local first = vim.fn.strdisplaywidth(r.str:sub(1, h.start)) + 1
+      return col >= first and col < first + 3 -- " 󰅖 "
+    end
+  end
+  return false
+end
+
 local function is_panel(win)
   local buf = vim.api.nvim_win_get_buf(win)
   local bo = vim.bo[buf]
-  return vim.api.nvim_win_get_config(win).relative == "" and bo.buftype ~= ""
+  -- floating windows only when they are terminals (lazygit): the other popups close with q/Esc
+  local float = vim.api.nvim_win_get_config(win).relative ~= ""
+  return (not float or bo.buftype == "terminal") and bo.buftype ~= ""
     and not OWN_HEADER[bo.filetype] and not vim.b[buf].image_view
 end
 
