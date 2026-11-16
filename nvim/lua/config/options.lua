@@ -5,7 +5,10 @@ local opt = vim.opt
 
 opt.relativenumber = false -- absolute line numbers, like VS Code
 opt.mouse = "a"
-opt.clipboard = "unnamedplus"
+-- Like VS Code, only copying or cutting (Ctrl+C, Ctrl+X, y) reaches the system
+-- clipboard (config/autocmds.lua); deleting or typing over text in a file never
+-- replaces what was copied. Ctrl+V pastes from the system clipboard.
+opt.clipboard = ""
 -- Long lines continue below instead of being cut, and follow the panel width
 opt.wrap = true
 opt.linebreak = true

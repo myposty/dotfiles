@@ -147,7 +147,9 @@ map({ "n", "i" }, "<C-S-z>", "<cmd>redo<cr>", { desc = "Redo" })
 map({ "n", "i" }, "<C-y>", "<cmd>redo<cr>", { desc = "Redo" })
 -- Select all is Ctrl+A everywhere; Claude has its own universal key (Alt+C)
 map({ "n", "i" }, "<C-a>", "<esc>ggVG", { desc = "Select all" })
-map("v", "<C-c>", '"+y', { desc = "Copy" })
+-- in a terminal (text selected by dragging) copying goes back to typing there
+map("v", "<C-c>", function() return '"+y' .. (vim.bo.buftype == "terminal" and "i" or "") end,
+  { expr = true, desc = "Copy" })
 map("v", "<C-x>", '"+d', { desc = "Cut" })
 map("i", "<C-v>", "<C-r>+", { desc = "Paste" })
 map({ "n", "i" }, "<C-/>", function() vim.cmd("normal gcc") end, { desc = "Toggle comment" })

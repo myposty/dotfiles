@@ -1,5 +1,5 @@
 -- Clickable file paths in terminals (Claude, shell), like links in the VS Code terminal.
--- Double-clicking (or Ctrl+clicking) a line that names a file opens it in the editor. Paths may be relative to the
+-- Ctrl+clicking a line that names a file opens it in the editor. Paths may be relative to the
 -- current folder, use \ or /, end in :line, or be shortened by Claude with "…"
 -- (ElSegundoSilbido\doc…\notes.md). Clicking a numbered line of a diff that Claude
 -- shows under Update(file) / Write(file) opens that file at that line.

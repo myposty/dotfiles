@@ -108,6 +108,7 @@ vim.api.nvim_create_autocmd({ "BufEnter", "WinEnter" }, {
 -- * drag a divider: the panel is resized here, the terminal stays ready to type
 -- * click another panel: leave the terminal and replay the click there
 local drag -- { win, kind } while a divider is being dragged
+local press -- where a click on a terminal's text started (a drag from it selects)
 
 local function divider_at(pos)
   local info = pos.winid ~= 0 and vim.fn.getwininfo(pos.winid)[1] or nil
@@ -239,8 +240,10 @@ vim.keymap.set("t", "<LeftMouse>", function()
     _G.VSCodeCloseButton(pos.winid)
     return ""
   end
-  -- (file paths open with a double click or Ctrl+click, never a single one: see TermOpen)
+  -- (file paths open with Ctrl+click only, never a plain or double click: see TermOpen)
   local cur = vim.api.nvim_get_current_win()
+  -- a press on the terminal's own text may become a drag selection (see <LeftDrag>)
+  press = info and pos.winid == cur and pos.line > 0 and pos or nil
   if info and pos.winid ~= cur then
     -- a floating terminal (lazygit) would stay on top covering everything: clicking
     -- outside hides it, like a VS Code popup (it keeps running; its key brings it back)
@@ -279,20 +282,53 @@ vim.keymap.set({ "n", "v", "i" }, "<LeftRelease>", function()
   return release_key
 end, { expr = true, desc = "Release after a click from a terminal" })
 
+local function cursor_to(p)
+  pcall(vim.api.nvim_win_set_cursor, p.winid, { p.line, math.max(p.column - 1, 0) })
+end
+
+-- Keys that leave terminal mode and select from `from` to `to` (getmousepos()
+-- results); the rest of the drag extends it (TermOpen below). Without `to` it is a
+-- double click: the word under the pointer. One key sequence, so each step runs
+-- after the previous one (leaving terminal mode moves the cursor to the prompt).
+local selecting = {}
+function _G.VSCodeTerminalSelect(step)
+  cursor_to(selecting[step])
+end
+local function select_in_terminal(from, to)
+  selecting = { from, to }
+  return "<C-\\><C-n><Cmd>lua VSCodeTerminalSelect(1)<CR>"
+    .. (to and "v<Cmd>lua VSCodeTerminalSelect(2)<CR>" or "viw")
+end
+
+-- Dragging over a terminal's text selects it, like VS Code's terminal (Ctrl+C copies,
+-- typing drops the selection and goes to the app); dragging a divider resizes panels
 vim.keymap.set("t", "<LeftDrag>", function()
+  local pos = vim.fn.getmousepos()
   if drag then
-    local pos = vim.fn.getmousepos()
     vim.schedule(function()
       resize_to(pos)
     end)
+  elseif press and pos.winid == press.winid and pos.line > 0 then
+    local from = press
+    press = nil
+    return select_in_terminal(from, pos)
   end
   return ""
-end, { expr = true, desc = "Drag a divider from a terminal" })
+end, { expr = true, desc = "Drag a divider / select text from a terminal" })
 
 vim.keymap.set("t", "<LeftRelease>", function()
-  drag = nil
+  drag, press = nil, nil
   return ""
 end, { expr = true, desc = "Stop dragging" })
+
+-- Double click in a terminal selects the word (it never opens anything)
+vim.keymap.set("t", "<2-LeftMouse>", function()
+  local pos = vim.fn.getmousepos()
+  if pos.winid == vim.api.nvim_get_current_win() and pos.line > 0 then
+    return select_in_terminal(pos)
+  end
+  return ""
+end, { expr = true, desc = "Select a word in a terminal" })
 
 -- Outside terminals Neovim handles the mouse itself; this only observes it:
 -- * pressing on a divider frees the two panels that touch it, so the native drag
@@ -354,17 +390,23 @@ vim.api.nvim_create_autocmd("TermOpen", {
     for _, key in ipairs(vim.list_extend(vim.deepcopy(keys), { "<C-x>", "<C-z>", "<C-y>", "<Del>", "<Tab>", "<S-Tab>" })) do
       vim.keymap.set("x", key, "<Esc>i" .. key, { buffer = ev.buf, nowait = true })
     end
-    -- A file path opens with a double click or Ctrl+click (VS Code's Ctrl+click; Vim
-    -- would look for a "tag" there). A single click only puts the focus here: it used
-    -- to open whatever file was under it, taking the focus away from Claude.
-    for _, key in ipairs({ "<C-LeftMouse>", "<2-LeftMouse>" }) do
-      vim.keymap.set({ "n", "t", "x" }, key, function()
-        if require("config.links").open_at(vim.fn.getmousepos()) then
-          -- the release lands in the opened file: not a drag selection there
-          vim.g.vscode_swallow_release = vim.uv.now()
-        end
-      end, { buffer = ev.buf })
-    end
+    -- A selection made by dragging (or a double click) keeps growing while the
+    -- mouse moves and stays when the button is released, ready for Ctrl+C
+    vim.keymap.set("x", "<LeftDrag>", function()
+      local pos = vim.fn.getmousepos()
+      if pos.winid == vim.api.nvim_get_current_win() and pos.line > 0 then
+        cursor_to(pos)
+      end
+    end, { buffer = ev.buf })
+    vim.keymap.set("x", "<LeftRelease>", "<Nop>", { buffer = ev.buf })
+    -- A file path opens with Ctrl+click only, like VS Code (Vim would look for a "tag"
+    -- there). A plain or double click never opens anything: a double click selects.
+    vim.keymap.set({ "n", "t", "x" }, "<C-LeftMouse>", function()
+      if require("config.links").open_at(vim.fn.getmousepos()) then
+        -- the release lands in the opened file: not a drag selection there
+        vim.g.vscode_swallow_release = vim.uv.now()
+      end
+    end, { buffer = ev.buf })
   end,
 })
 
@@ -436,6 +478,23 @@ local function no_files_open()
   end
   return true
 end
+
+-- Copying with y also reaches the system clipboard (options.lua leaves the clipboard
+-- out of deletes): run after config/links.lua has unwrapped copied paths
+vim.api.nvim_create_autocmd("TextYankPost", {
+  group = vim.api.nvim_create_augroup("vscode_copy_to_clipboard", { clear = true }),
+  callback = function()
+    local e = vim.v.event
+    if e.operator ~= "y" or e.regname ~= "" then
+      return
+    end
+    vim.schedule(function()
+      vim.schedule(function()
+        vim.fn.setreg("+", vim.fn.getreg('"'), vim.fn.getregtype('"'))
+      end)
+    end)
+  end,
+})
 
 -- Every start screen registers its autocmds in one augroup named "snacks_dashboard" and
 -- deletes it when closed, so with two open (one per tab) closing the second one failed
