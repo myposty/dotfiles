@@ -101,6 +101,19 @@ vim.api.nvim_create_autocmd({ "BufEnter", "WinEnter" }, {
   end,
 })
 
+-- A click from a file being typed in keeps Insert mode in the window it lands on.
+-- Panels (explorer, Git panel, lists) are not typed in: there it would turn the
+-- double click that opens a file into a word selection (Visual mode)
+vim.api.nvim_create_autocmd("WinEnter", {
+  group = term_focus,
+  callback = function()
+    local bt = vim.bo.buftype
+    if bt ~= "" and bt ~= "terminal" and bt ~= "prompt" and vim.fn.mode() == "i" then
+      vim.cmd.stopinsert()
+    end
+  end,
+})
+
 -- Mouse while typing in a terminal (Claude, shell). Apps like Claude do not use the
 -- mouse, so by default any click drops Neovim out of terminal mode and keys stop
 -- reaching the app. Instead:
