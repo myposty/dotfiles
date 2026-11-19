@@ -10,9 +10,12 @@ local EXTERNAL = {
   "mp4", "mov", "mkv", "avi", "webm", "m4v", "wmv", "flv",
   "mp3", "wav", "flac", "ogg", "m4a", "aac", "wma",
   "pdf", "doc", "docx", "xls", "xlsx", "xlsm", "ppt", "pptx", "odt", "ods", "odp", "rtf",
-  "zip", "7z", "rar", "gz", "tgz", "bz2", "xz", "iso", "dmg", "exe", "msi",
+  "zip", "7z", "rar", "gz", "tgz", "bz2", "xz", "iso", "dmg",
   "psd", "ai", "sketch", "fig", "blend", "fbx", "obj", "glb", "gltf", "uasset", "umap",
 }
+-- Programs: opening one in the system would RUN it, so the editor never does, like
+-- VS Code (a click by mistake once launched an .exe). Scripts (.bat, .ps1) open as text.
+local PROGRAMS = { "exe", "msi", "dll", "com", "scr", "sys", "cpl", "msc" }
 
 local function ext_of(path)
   return (path:match("%.([%w]+)$") or ""):lower()
@@ -127,19 +130,25 @@ end
 
 vim.api.nvim_create_autocmd("BufReadCmd", {
   group = vim.api.nvim_create_augroup("vscode_images", { clear = true }),
-  pattern = vim.list_extend(patterns(IMAGES), patterns(EXTERNAL)),
+  pattern = vim.list_extend(vim.list_extend(patterns(IMAGES), patterns(EXTERNAL)), patterns(PROGRAMS)),
   callback = function(ev)
     local path = vim.fn.fnamemodify(ev.match, ":p")
     local image = vim.tbl_contains(IMAGES, ext_of(path))
     if image and snacks_can_show() then
       return -- Snacks image draws it in this buffer
     end
+    local program = vim.tbl_contains(PROGRAMS, ext_of(path))
     local win = vim.api.nvim_get_current_win()
     vim.schedule(function()
       if image and chafa_cmd() and vim.api.nvim_win_is_valid(win) then
         view(win, path)
       else
-        M.open_external(path)
+        if program then
+          vim.notify(vim.fn.fnamemodify(path, ":t") .. " is a program: it is not run from the editor",
+            vim.log.levels.WARN)
+        else
+          M.open_external(path)
+        end
         -- nothing to show in the editor: back to the previous buffer (or the start screen)
         local alt = vim.fn.bufnr("#")
         if alt > 0 and alt ~= ev.buf and vim.api.nvim_buf_is_valid(alt) and vim.bo[alt].buflisted then
